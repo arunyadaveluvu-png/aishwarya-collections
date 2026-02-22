@@ -183,6 +183,14 @@ export const AuthProvider = ({ children }) => {
         if (error) throw error;
     }, []);
 
+    const resendOtp = useCallback(async (email, type = 'signup') => {
+        const { error } = await supabase.auth.resend({
+            type,
+            email,
+        });
+        if (error) throw error;
+    }, []);
+
     const logout = useCallback(async () => {
         if (isLoggingOut.current) return;
 
@@ -230,6 +238,7 @@ export const AuthProvider = ({ children }) => {
             sendPasswordResetOtp,
             verifyOtp,
             updatePassword,
+            resendOtp,
             resetTimer,
             refreshProfile: fetchProfile
         };

@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
-import { Users, Mail, ShoppingBag, TrendingUp, Search, Calendar } from 'lucide-react';
+import { Users, Mail, ShoppingBag, TrendingUp, Search, Calendar, Trash2, AlertTriangle, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminCustomers = () => {
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [search, setSearch] = useState('');
+    const [deleteId, setDeleteId] = useState(null);
+    const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
         fetchCustomers();
@@ -17,11 +20,12 @@ const AdminCustomers = () => {
             setLoading(true);
             setError(null);
 
-            // Get the current admin's access token to authorize the edge function
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error('Not authenticated');
 
             const projectUrl = import.meta.env.VITE_SUPABASE_URL;
+            if (!projectUrl) throw new Error('Supabase URL (VITE_SUPABASE_URL) is not defined in environment variables.');
+
             const res = await fetch(`${projectUrl}/functions/v1/get-customers`, {
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`,
@@ -29,10 +33,17 @@ const AdminCustomers = () => {
                 }
             });
 
-            const json = await res.json();
-            if (!res.ok) throw new Error(json.error || 'Failed to fetch customers');
-
-            setCustomers(json.customers || []);
+            // Improved error handling for non-JSON or server errors
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.error || `Server Error: ${res.status}`);
+                setCustomers(json.customers || []);
+            } else {
+                const text = await res.text();
+                console.error('Non-JSON response:', text);
+                throw new Error(`Invalid response from server. Check if Edge Function is deployed and URL is correct. ${res.status}`);
+            }
         } catch (err) {
             console.error('Error fetching customers:', err.message);
             setError(err.message);
@@ -41,12 +52,42 @@ const AdminCustomers = () => {
         }
     };
 
+    const handleDeleteUser = async () => {
+        if (!deleteId) return;
+        try {
+            setDeleting(true);
+            const { data: { session } } = await supabase.auth.getSession();
+            const projectUrl = import.meta.env.VITE_SUPABASE_URL;
+
+            const res = await fetch(`${projectUrl}/functions/v1/get-customers?id=${deleteId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'Failed to delete user');
+
+            setCustomers(prev => prev.filter(c => c.id !== deleteId));
+            setDeleteId(null);
+            alert('User credentials deleted successfully.');
+        } catch (err) {
+            console.error('Delete error:', err.message);
+            alert(`Error: ${err.message}`);
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     const filtered = customers.filter(c =>
-        c.email?.toLowerCase().includes(search.toLowerCase())
+        c.email?.toLowerCase().includes(search.toLowerCase()) ||
+        c.name?.toLowerCase().includes(search.toLowerCase())
     );
 
-    const totalRevenue = customers.reduce((sum, c) => sum + c.total_spent, 0);
-    const activeCustomers = customers.filter(c => c.orders > 0).length;
+    const totalRevenue = customers.reduce((sum, c) => sum + (c.total_spent || 0), 0);
+    const activeCustomers = customers.filter(c => (c.orders || 0) > 0).length;
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '—';
@@ -67,7 +108,7 @@ const AdminCustomers = () => {
     };
 
     return (
-        <div style={{ padding: '0' }}>
+        <div style={{ padding: '0', position: 'relative' }}>
             {/* Page Header */}
             <div style={{ marginBottom: '2rem' }}>
                 <h1 style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--secondary)', margin: '0 0 6px' }}>
@@ -79,74 +120,88 @@ const AdminCustomers = () => {
             </div>
 
             {/* Stats Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
                 {[
                     { label: 'Total Customers', value: customers.length, icon: Users, color: '#6366f1' },
                     { label: 'Active Buyers', value: activeCustomers, icon: ShoppingBag, color: '#10b981' },
                     { label: 'Total Revenue', value: `₹${totalRevenue.toLocaleString('en-IN')}`, icon: TrendingUp, color: 'var(--primary)' },
                 ].map(stat => (
                     <div key={stat.label} style={{
-                        background: '#fff', borderRadius: '14px', padding: '1.2rem',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                        display: 'flex', alignItems: 'center', gap: '1rem'
+                        background: '#fff', borderRadius: '14px', padding: '1.5rem',
+                        boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)',
+                        display: 'flex', alignItems: 'center', gap: '1.2rem'
                     }}>
                         <div style={{
-                            width: '44px', height: '44px', borderRadius: '12px',
+                            width: '48px', height: '48px', borderRadius: '12px',
                             background: `${stat.color}15`,
                             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                         }}>
-                            <stat.icon size={22} color={stat.color} />
+                            <stat.icon size={24} color={stat.color} />
                         </div>
                         <div>
-                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--secondary)' }}>
+                            <div style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--secondary)', lineHeight: 1.2 }}>
                                 {stat.value}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{stat.label}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '500' }}>{stat.label}</div>
                         </div>
                     </div>
                 ))}
             </div>
 
-            {/* Search */}
-            <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
-                <Search size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                <input
-                    type="text"
-                    placeholder="Search by email..."
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    style={{
-                        width: '100%', boxSizing: 'border-box',
-                        padding: '0.75rem 1rem 0.75rem 2.5rem',
-                        borderRadius: '10px', border: '1px solid var(--border)',
-                        fontSize: '0.9rem', outline: 'none'
-                    }}
-                />
+            {/* Search/Actions Bar */}
+            <div style={{ position: 'relative', marginBottom: '1.5rem', display: 'flex', gap: '10px' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                    <Search size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input
+                        type="text"
+                        placeholder="Search by name or email..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        style={{
+                            width: '100%', boxSizing: 'border-box',
+                            padding: '0.9rem 1rem 0.9rem 3rem',
+                            borderRadius: '12px', border: '1px solid var(--border)',
+                            fontSize: '1rem', outline: 'none', background: '#fff',
+                            transition: 'border-color 0.2s, box-shadow 0.2s',
+                            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+                        }}
+                    />
+                </div>
+                <button onClick={fetchCustomers} className="btn-secondary" style={{ padding: '0 1.5rem', borderRadius: '12px' }}>
+                    Refresh
+                </button>
             </div>
 
-            {/* Content */}
-            {loading ? (
-                <div style={{ textAlign: 'center', padding: '4rem' }}>
-                    <div className="loading-spinner" />
-                    <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>Fetching customer data...</p>
-                </div>
-            ) : error ? (
-                <div style={{ background: '#fee2e2', color: '#991b1b', padding: '1.5rem', borderRadius: '12px' }}>
-                    <strong>Error:</strong> {error}
-                    <br />
-                    <button onClick={fetchCustomers} style={{ marginTop: '10px', padding: '6px 14px', borderRadius: '8px', background: '#991b1b', color: '#fff', border: 'none', cursor: 'pointer' }}>
-                        Retry
+            {/* Error Message */}
+            {error && (
+                <div style={{ background: '#fff1f1', border: '1px solid #fee2e2', color: '#991b1b', padding: '1.5rem', borderRadius: '12px', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <AlertTriangle size={20} />
+                        <div>
+                            <strong style={{ display: 'block', marginBottom: '4px' }}>Data Fetch Error</strong>
+                            <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.9 }}>{error}</p>
+                        </div>
+                    </div>
+                    <button onClick={fetchCustomers} style={{ alignSelf: 'flex-start', padding: '8px 20px', borderRadius: '8px', background: '#991b1b', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: '600' }}>
+                        Try Again
                     </button>
                 </div>
+            )}
+
+            {/* Content List */}
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '5rem', background: '#fff', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                    <div className="loading-spinner" style={{ margin: '0 auto 1.5rem' }} />
+                    <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Loading customer profiles...</p>
+                </div>
             ) : (
-                <div style={{ background: '#fff', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-                    {/* Desktop Table */}
-                    <div className="customers-desktop-table">
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div style={{ background: '#fff', borderRadius: '16px', boxShadow: 'var(--shadow-sm)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                    <div className="table-container" style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
                             <thead>
-                                <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                                    {['Customer', 'Joined', 'Last Login', 'Orders', 'Total Spent', 'Status'].map(col => (
-                                        <th key={col} style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', fontWeight: '600' }}>
+                                <tr style={{ background: '#f9fafb', borderBottom: '1px solid var(--border)' }}>
+                                    {['Customer', 'Joined', 'Last Login', 'Stats', 'Status', 'Actions'].map(col => (
+                                        <th key={col} style={{ padding: '1.2rem 1rem', textAlign: 'left', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', fontWeight: '700' }}>
                                             {col}
                                         </th>
                                     ))}
@@ -155,108 +210,134 @@ const AdminCustomers = () => {
                             <tbody>
                                 {filtered.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                            No customers found
+                                        <td colSpan={6} style={{ padding: '5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
+                                                <Users size={40} opacity={0.3} />
+                                                <p style={{ margin: 0, fontSize: '1.1rem' }}>No customers match your search.</p>
+                                            </div>
                                         </td>
                                     </tr>
                                 ) : filtered.map(customer => (
-                                    <tr key={customer.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                                        <td style={{ padding: '1rem' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <tr key={customer.id} style={{ borderBottom: '1px solid #f3f4f6', transition: 'background 0.2s' }} className="table-row-hover">
+                                        <td style={{ padding: '1.2rem 1rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 <div style={{
-                                                    width: '34px', height: '34px', borderRadius: '50%',
-                                                    background: 'rgba(212,175,55,0.15)', flexShrink: 0,
+                                                    width: '40px', height: '40px', borderRadius: '50%',
+                                                    background: 'var(--primary-light)', flexShrink: 0,
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    fontWeight: '700', fontSize: '0.85rem', color: 'var(--primary)'
+                                                    fontWeight: '700', fontSize: '1rem', color: 'var(--primary)'
                                                 }}>
                                                     {(customer.name || customer.email)?.charAt(0).toUpperCase() || '?'}
                                                 </div>
                                                 <div>
-                                                    <div style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--secondary)' }}>{customer.name || 'Anonymous User'}</div>
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{customer.email || '—'}</div>
+                                                    <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--secondary)' }}>{customer.name || 'Anonymous User'}</div>
+                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{customer.email || '—'}</div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                        <td style={{ padding: '1.2rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <Calendar size={13} />
+                                                <Calendar size={14} />
                                                 {formatDate(customer.created_at)}
                                             </div>
                                         </td>
-                                        <td style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                        <td style={{ padding: '1.2rem 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                                             {formatTime(customer.last_sign_in_at)}
                                         </td>
-                                        <td style={{ padding: '1rem', fontSize: '0.9rem', fontWeight: '600' }}>
-                                            {customer.orders}
+                                        <td style={{ padding: '1.2rem 1rem' }}>
+                                            <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--secondary)' }}>{customer.orders} Orders</div>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--primary-dark)', fontWeight: '600' }}>₹{customer.total_spent.toLocaleString('en-IN')}</div>
                                         </td>
-                                        <td style={{ padding: '1rem', fontWeight: '700', color: customer.total_spent > 0 ? 'var(--primary-dark)' : 'var(--text-muted)' }}>
-                                            ₹{customer.total_spent.toLocaleString('en-IN')}
-                                        </td>
-                                        <td style={{ padding: '1rem' }}>
+                                        <td style={{ padding: '1.2rem 1rem' }}>
                                             <span style={{
-                                                padding: '3px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: '700',
+                                                padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700',
                                                 background: customer.orders > 0 ? '#dcfce7' : '#f3f4f6',
-                                                color: customer.orders > 0 ? '#166534' : '#6b7280'
+                                                color: customer.orders > 0 ? '#166534' : '#6b7280',
+                                                display: 'inline-block', border: `1px solid ${customer.orders > 0 ? '#bbf7d0' : '#e5e7eb'}`
                                             }}>
-                                                {customer.orders > 0 ? 'Active' : 'Registered'}
+                                                {customer.orders > 0 ? 'Active Buyer' : 'Lead'}
                                             </span>
+                                        </td>
+                                        <td style={{ padding: '1.2rem 1rem' }}>
+                                            <button
+                                                onClick={() => setDeleteId(customer.id)}
+                                                style={{
+                                                    background: 'transparent', border: 'none', color: '#ef4444',
+                                                    cursor: 'pointer', padding: '8px', borderRadius: '8px',
+                                                    transition: 'background 0.2s'
+                                                }}
+                                                className="btn-icon-hover"
+                                                title="Delete User Credentials"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
-
-                    {/* Mobile Cards */}
-                    <div className="customers-mobile-cards">
-                        {filtered.length === 0 ? (
-                            <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>No customers found</p>
-                        ) : filtered.map(customer => (
-                            <div key={customer.id} style={{ padding: '1rem', borderBottom: '1px solid #f3f4f6' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                                    <div style={{
-                                        width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0,
-                                        background: 'rgba(212,175,55,0.15)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        fontWeight: '700', color: 'var(--primary)'
-                                    }}>
-                                        {customer.email?.charAt(0).toUpperCase() || '?'}
-                                    </div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontWeight: '600', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {customer.email || '—'}
-                                        </div>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                            Joined {formatDate(customer.created_at)}
-                                        </div>
-                                    </div>
-                                    <span style={{
-                                        padding: '3px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: '700', flexShrink: 0,
-                                        background: customer.orders > 0 ? '#dcfce7' : '#f3f4f6',
-                                        color: customer.orders > 0 ? '#166534' : '#6b7280'
-                                    }}>
-                                        {customer.orders > 0 ? 'Active' : 'Registered'}
-                                    </span>
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', fontSize: '0.8rem' }}>
-                                    <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-                                        <div style={{ fontWeight: '700', color: 'var(--secondary)' }}>{customer.orders}</div>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>Orders</div>
-                                    </div>
-                                    <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-                                        <div style={{ fontWeight: '700', color: 'var(--primary-dark)' }}>₹{customer.total_spent.toLocaleString('en-IN')}</div>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>Spent</div>
-                                    </div>
-                                    <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-                                        <div style={{ fontWeight: '700', color: 'var(--secondary)', fontSize: '0.75rem' }}>{formatTime(customer.last_sign_in_at)}</div>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>Last Login</div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
                 </div>
             )}
+
+            {/* Deletion Confirmation Modal */}
+            <AnimatePresence>
+                {deleteId && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        zIndex: 1000, padding: '20px'
+                    }}>
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            style={{
+                                background: '#fff', borderRadius: '16px', padding: '2rem',
+                                maxWidth: '400px', width: '100%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
+                            }}
+                        >
+                            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                                <div style={{
+                                    width: '60px', height: '60px', borderRadius: '50%', background: '#fee2e2',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.2rem'
+                                }}>
+                                    <Trash2 size={28} color="#ef4444" />
+                                </div>
+                                <h3 style={{ margin: '0 0 10px', fontSize: '1.25rem', fontWeight: '700', color: 'var(--secondary)' }}>Delete User Credentials?</h3>
+                                <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                                    This will permanently remove the user's authentication credentials. The user will be logged out and cannot log back in.
+                                </p>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <button
+                                    onClick={() => setDeleteId(null)}
+                                    disabled={deleting}
+                                    style={{
+                                        padding: '12px', borderRadius: '10px', border: '1px solid var(--border)',
+                                        background: '#fff', color: 'var(--secondary)', fontWeight: '600', cursor: 'pointer'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDeleteUser}
+                                    disabled={deleting}
+                                    style={{
+                                        padding: '12px', borderRadius: '10px', border: 'none',
+                                        background: '#ef4444', color: '#fff', fontWeight: '600', cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                                    }}
+                                >
+                                    {deleting ? 'Deleting...' : 'Confirm Delete'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

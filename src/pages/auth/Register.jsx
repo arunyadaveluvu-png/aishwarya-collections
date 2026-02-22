@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { UserPlus, Mail, Lock, User, AlertCircle, CheckCircle2, Key } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, AlertCircle, CheckCircle2, Key, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Logo from '../../components/Logo';
 
@@ -13,8 +13,19 @@ const Register = () => {
     const [otp, setOtp] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const { register, verifyOtp } = useAuth();
+    const [resendTimer, setResendTimer] = useState(0);
+    const { register, verifyOtp, resendOtp } = useAuth();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        let interval;
+        if (resendTimer > 0) {
+            interval = setInterval(() => {
+                setResendTimer((prev) => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [resendTimer]);
 
     const handleRegister = async (e) => {
         e.preventDefault();
@@ -22,8 +33,8 @@ const Register = () => {
             setError('');
             setLoading(true);
             await register(email, password);
-            // After successful signup, move to OTP step
             setStep(2);
+            setResendTimer(60); // Set 60s cooldown
         } catch (err) {
             setError(err.message || 'Failed to create an account.');
         } finally {
@@ -46,6 +57,18 @@ const Register = () => {
         }
     };
 
+    const handleResendCode = async () => {
+        if (resendTimer > 0) return;
+        try {
+            setError('');
+            await resendOtp(email, 'signup');
+            setResendTimer(60);
+            alert('A new verification code has been sent to your email.');
+        } catch (err) {
+            setError(err.message || 'Failed to resend code.');
+        }
+    };
+
     return (
         <div className="container" style={{
             minHeight: '80vh',
@@ -63,8 +86,8 @@ const Register = () => {
                     maxWidth: '450px',
                     backgroundColor: 'var(--white)',
                     padding: '3rem',
-                    borderRadius: '8px',
-                    boxShadow: 'var(--shadow)',
+                    borderRadius: '12px',
+                    boxShadow: 'var(--shadow-lg)',
                     border: '1px solid var(--border)'
                 }}
             >
@@ -72,15 +95,15 @@ const Register = () => {
                     backgroundColor: 'black',
                     margin: '-3rem -3rem 2.5rem -3rem',
                     padding: '3rem',
-                    borderRadius: '8px 8px 0 0',
+                    borderRadius: '12px 12px 0 0',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: '10px'
                 }}>
                     <Logo size="medium" light={true} />
-                    <p style={{ color: 'rgba(255,255,255,0.7)', marginTop: '10px' }}>
-                        {step === 1 ? 'Create an account to experience luxury' : 'Verify your luxury account'}
+                    <p style={{ color: 'rgba(255,255,255,0.7)', marginTop: '10px', fontSize: '0.9rem' }}>
+                        {step === 1 ? 'Create an account to experience luxury' : 'Verify your account'}
                     </p>
                 </div>
 
@@ -89,7 +112,7 @@ const Register = () => {
                         backgroundColor: '#fff5f5',
                         color: 'var(--accent)',
                         padding: '1rem',
-                        borderRadius: '4px',
+                        borderRadius: '8px',
                         marginBottom: '1.5rem',
                         display: 'flex',
                         alignItems: 'center',
@@ -104,8 +127,8 @@ const Register = () => {
 
                 {step === 1 ? (
                     <form onSubmit={handleRegister}>
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--secondary)' }}>Full Name</label>
+                        <div style={{ marginBottom: '1.25rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: '600', color: 'var(--secondary)' }}>Full Name</label>
                             <div style={{ position: 'relative' }}>
                                 <User size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                                 <input
@@ -117,16 +140,17 @@ const Register = () => {
                                     style={{
                                         width: '100%',
                                         padding: '12px 12px 12px 40px',
-                                        borderRadius: '4px',
+                                        borderRadius: '8px',
                                         border: '1px solid var(--border)',
-                                        fontSize: '1rem'
+                                        fontSize: '1rem',
+                                        background: '#f9fafb'
                                     }}
                                 />
                             </div>
                         </div>
 
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--secondary)' }}>Email Address</label>
+                        <div style={{ marginBottom: '1.25rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: '600', color: 'var(--secondary)' }}>Email Address</label>
                             <div style={{ position: 'relative' }}>
                                 <Mail size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                                 <input
@@ -138,16 +162,17 @@ const Register = () => {
                                     style={{
                                         width: '100%',
                                         padding: '12px 12px 12px 40px',
-                                        borderRadius: '4px',
+                                        borderRadius: '8px',
                                         border: '1px solid var(--border)',
-                                        fontSize: '1rem'
+                                        fontSize: '1rem',
+                                        background: '#f9fafb'
                                     }}
                                 />
                             </div>
                         </div>
 
                         <div style={{ marginBottom: '2rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--secondary)' }}>Password</label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: '600', color: 'var(--secondary)' }}>Password</label>
                             <div style={{ position: 'relative' }}>
                                 <Lock size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                                 <input
@@ -155,13 +180,14 @@ const Register = () => {
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Enter your password"
+                                    placeholder="Create a password"
                                     style={{
                                         width: '100%',
                                         padding: '12px 12px 12px 40px',
-                                        borderRadius: '4px',
+                                        borderRadius: '8px',
                                         border: '1px solid var(--border)',
-                                        fontSize: '1rem'
+                                        fontSize: '1rem',
+                                        background: '#f9fafb'
                                     }}
                                 />
                             </div>
@@ -178,7 +204,8 @@ const Register = () => {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: '10px',
-                                fontSize: '1.1rem'
+                                fontSize: '1.1rem',
+                                borderRadius: '8px'
                             }}
                         >
                             {loading ? 'Creating account...' : (
@@ -191,28 +218,42 @@ const Register = () => {
                     </form>
                 ) : (
                     <form onSubmit={handleVerifyOtp}>
-                        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                            <CheckCircle2 size={40} color="#10b981" style={{ margin: '0 auto 1rem' }} />
-                            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                                Almost there! We've sent a 6-digit confirmation code to <strong>{email}</strong>.
+                        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                            <div style={{
+                                width: '64px', height: '64px', borderRadius: '50%',
+                                background: '#dcfce7', display: 'flex', alignItems: 'center',
+                                justifyContent: 'center', margin: '0 auto 1.5rem'
+                            }}>
+                                <CheckCircle2 size={32} color="#10b981" />
+                            </div>
+                            <h3 style={{ margin: '0 0 8px', color: 'var(--secondary)' }}>Verify Email</h3>
+                            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                                We've sent a 6-digit verification code to <br />
+                                <strong style={{ color: 'var(--secondary)' }}>{email}</strong>.
                             </p>
                         </div>
+
                         <div style={{ marginBottom: '2rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--secondary)' }}>Verification Code</label>
+                            <label style={{ display: 'block', marginBottom: '0.8rem', fontSize: '0.9rem', fontWeight: '600', color: 'var(--secondary)', textAlign: 'center' }}>Enter Code</label>
                             <div style={{ position: 'relative' }}>
                                 <Key size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                                 <input
                                     type="text"
                                     required
+                                    maxLength={6}
                                     value={otp}
-                                    onChange={(e) => setOtp(e.target.value)}
-                                    placeholder="Enter 6-digit code"
+                                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                                    placeholder="000000"
                                     style={{
                                         width: '100%',
-                                        padding: '12px 12px 12px 40px',
-                                        borderRadius: '4px',
-                                        border: '1px solid var(--border)',
-                                        fontSize: '1rem'
+                                        padding: '16px 12px 16px 45px',
+                                        borderRadius: '8px',
+                                        border: '2px solid var(--border)',
+                                        fontSize: '1.5rem',
+                                        textAlign: 'center',
+                                        letterSpacing: '8px',
+                                        fontWeight: '700',
+                                        background: '#fff'
                                     }}
                                 />
                             </div>
@@ -224,40 +265,64 @@ const Register = () => {
                             className="btn-primary"
                             style={{
                                 width: '100%',
-                                padding: '14px',
+                                padding: '16px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: '10px',
-                                fontSize: '1.1rem'
+                                fontSize: '1.1rem',
+                                borderRadius: '8px',
+                                marginBottom: '1.5rem'
                             }}
                         >
-                            {loading ? 'Verifying...' : 'Verify Email'}
+                            {loading ? 'Verifying...' : 'Complete Registration'}
                         </button>
+
+                        <div style={{ textAlign: 'center' }}>
+                            <button
+                                type="button"
+                                onClick={handleResendCode}
+                                disabled={resendTimer > 0}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: resendTimer > 0 ? 'var(--text-muted)' : 'var(--primary)',
+                                    fontSize: '0.9rem',
+                                    cursor: resendTimer > 0 ? 'default' : 'pointer',
+                                    fontWeight: '600',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}
+                            >
+                                <RefreshCw size={14} className={resendTimer > 0 ? '' : 'spin-on-hover'} />
+                                {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend verification code'}
+                            </button>
+                        </div>
 
                         <button
                             type="button"
                             onClick={() => setStep(1)}
                             style={{
                                 width: '100%',
-                                marginTop: '1rem',
+                                marginTop: '1.5rem',
                                 background: 'none',
                                 border: 'none',
                                 color: 'var(--text-muted)',
-                                fontSize: '0.9rem',
+                                fontSize: '0.85rem',
                                 cursor: 'pointer',
                                 textDecoration: 'underline'
                             }}
                         >
-                            Back to Registration
+                            Use a different email address
                         </button>
                     </form>
                 )}
 
-                <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                <div style={{ marginTop: '2.5rem', textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
                     Already have an account?{' '}
-                    <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 'bold', textDecoration: 'none' }}>
-                        Sign in here
+                    <Link to="/login" style={{ color: 'var(--primary)', fontWeight: '700', textDecoration: 'none' }}>
+                        Sign in
                     </Link>
                 </div>
             </motion.div>
