@@ -17,6 +17,8 @@ const ProductDetails = ({ addToCart }) => {
     const [submittingReview, setSubmittingReview] = useState(false);
     const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
     const [currentUser, setCurrentUser] = useState(null);
+    const [hasPurchased, setHasPurchased] = useState(false);
+    const [checkPurchaseLoading, setCheckPurchaseLoading] = useState(true);
 
     const fetchProduct = useCallback(async () => {
         try {
@@ -61,7 +63,36 @@ const ProductDetails = ({ addToCart }) => {
     const checkUser = useCallback(async () => {
         const { data: { user } } = await supabase.auth.getUser();
         setCurrentUser(user);
-    }, []);
+        if (user) {
+            checkPurchaseStatus(user.id);
+        } else {
+            setCheckPurchaseLoading(false);
+        }
+    }, [id]);
+
+    const checkPurchaseStatus = async (userId) => {
+        try {
+            setCheckPurchaseLoading(true);
+            // Check if user has a delivered order containing this product
+            const { data, error } = await supabase
+                .from('orders')
+                .select(`
+                    id,
+                    status,
+                    order_items!inner(product_id)
+                `)
+                .eq('user_id', userId)
+                .eq('status', 'Delivered')
+                .eq('order_items.product_id', id);
+
+            if (error) throw error;
+            setHasPurchased(data && data.length > 0);
+        } catch (err) {
+            console.error("Error checking purchase status:", err.message);
+        } finally {
+            setCheckPurchaseLoading(false);
+        }
+    };
 
     const handleReviewSubmit = async (e) => {
         e.preventDefault();
@@ -328,58 +359,71 @@ const ProductDetails = ({ addToCart }) => {
                         </div>
 
                         {currentUser ? (
-                            <form onSubmit={handleReviewSubmit} className="glass-morphism" style={{ padding: '2rem', borderRadius: '12px' }}>
-                                <h4 style={{ marginBottom: '1.5rem' }}>Write a Review</h4>
+                            checkPurchaseLoading ? (
+                                <div style={{ padding: '2rem', textAlign: 'center' }}>
+                                    <div className="loading-spinner"></div>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '1rem' }}>Verifying purchase...</p>
+                                </div>
+                            ) : hasPurchased ? (
+                                <form onSubmit={handleReviewSubmit} className="glass-morphism" style={{ padding: '2rem', borderRadius: '12px' }}>
+                                    <h4 style={{ marginBottom: '1.5rem' }}>Write a Review</h4>
 
-                                <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Rating</label>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        {[1, 2, 3, 4, 5].map(star => (
-                                            <button
-                                                key={star}
-                                                type="button"
-                                                onClick={() => setNewReview(prev => ({ ...prev, rating: star }))}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                                            >
-                                                <Star
-                                                    size={24}
-                                                    fill={star <= newReview.rating ? "var(--accent)" : "none"}
-                                                    color={star <= newReview.rating ? "var(--accent)" : "#cbd5e1"}
-                                                />
-                                            </button>
-                                        ))}
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Rating</label>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            {[1, 2, 3, 4, 5].map(star => (
+                                                <button
+                                                    key={star}
+                                                    type="button"
+                                                    onClick={() => setNewReview(prev => ({ ...prev, rating: star }))}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                                >
+                                                    <Star
+                                                        size={24}
+                                                        fill={star <= newReview.rating ? "var(--accent)" : "none"}
+                                                        color={star <= newReview.rating ? "var(--accent)" : "#cbd5e1"}
+                                                    />
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Comment</label>
-                                    <textarea
-                                        value={newReview.comment}
-                                        onChange={(e) => setNewReview(prev => ({ ...prev, comment: e.target.value }))}
-                                        rows="4"
-                                        placeholder="Share your thoughts about this saree..."
-                                        style={{ width: '100%', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', resize: 'vertical' }}
-                                    ></textarea>
-                                </div>
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Comment</label>
+                                        <textarea
+                                            value={newReview.comment}
+                                            onChange={(e) => setNewReview(prev => ({ ...prev, comment: e.target.value }))}
+                                            rows="4"
+                                            placeholder="Share your thoughts about this saree..."
+                                            style={{ width: '100%', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', resize: 'vertical' }}
+                                        ></textarea>
+                                    </div>
 
-                                <button
-                                    type="submit"
-                                    disabled={submittingReview}
-                                    className="btn-primary"
-                                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
-                                >
-                                    {submittingReview ? <div className="loading-spinner" style={{ width: '20px', height: '20px' }}></div> : (
-                                        <>
-                                            <Send size={18} />
-                                            Submit Review
-                                        </>
-                                    )}
-                                </button>
-                            </form>
+                                    <button
+                                        type="submit"
+                                        disabled={submittingReview}
+                                        className="btn-primary"
+                                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                                    >
+                                        {submittingReview ? <div className="loading-spinner" style={{ width: '20px', height: '20px' }}></div> : (
+                                            <>
+                                                <Send size={18} />
+                                                Submit Review
+                                            </>
+                                        )}
+                                    </button>
+                                </form>
+                            ) : (
+                                <div style={{ padding: '2rem', textAlign: 'center', backgroundColor: 'var(--bg-alt)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
+                                    <Truck size={32} color="var(--primary)" style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                                    <h5 style={{ marginBottom: '0.5rem' }}>Not Purchased Yet?</h5>
+                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Only customers who have bought and received this saree can leave a review. This ensures all reviews are from real owners!</p>
+                                </div>
+                            )
                         ) : (
                             <div style={{ padding: '2rem', textAlign: 'center', backgroundColor: 'var(--bg-alt)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
                                 <MessageSquare size={32} color="var(--text-muted)" style={{ marginBottom: '1rem', opacity: 0.5 }} />
-                                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Only logged-in customers can leave a review.</p>
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Only logged-in customers who purchased this can leave a review.</p>
                                 <Link to="/login" className="btn-outline" style={{ display: 'inline-block', marginTop: '1rem', textDecoration: 'none', fontSize: '0.8rem' }}>Log In to Review</Link>
                             </div>
                         )}
