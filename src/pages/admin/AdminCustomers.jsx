@@ -28,25 +28,14 @@ const AdminCustomers = () => {
 
             const projectUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xyoidkfzbwsolaonpddk.supabase.co';
 
-            const res = await fetch(`${projectUrl}/functions/v1/get-customers`, {
+            const { data: json, error: funcError } = await supabase.functions.invoke('get-customers', {
                 headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json',
                     'apikey': 'sb_publishable_eEy_5GM0aN7PKnu2QNae3w_ioMyX5Vw'
                 }
             });
 
-            // Improved error handling for non-JSON or server errors
-            const contentType = res.headers.get("content-type");
-            if (contentType && contentType.indexOf("application/json") !== -1) {
-                const json = await res.json();
-                if (!res.ok) throw new Error(json.error || `Server Error: ${res.status}`);
-                setCustomers(json.customers || []);
-            } else {
-                const text = await res.text();
-                console.error('Non-JSON response:', text);
-                throw new Error(`Invalid response from server. Check if Edge Function is deployed and URL is correct. ${res.status}`);
-            }
+            if (funcError) throw funcError;
+            setCustomers(json.customers || []);
         } catch (err) {
             console.error('Error fetching customers:', err.message);
             setError(err.message);
@@ -62,18 +51,15 @@ const AdminCustomers = () => {
             const { data: { session } } = await supabase.auth.getSession();
             const projectUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xyoidkfzbwsolaonpddk.supabase.co';
 
-            const res = await fetch(`${projectUrl}/functions/v1/get-customers`, {
+            const { data: json, error: funcError } = await supabase.functions.invoke('get-customers', {
                 method: 'POST',
+                body: addForm,
                 headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json',
                     'apikey': 'sb_publishable_eEy_5GM0aN7PKnu2QNae3w_ioMyX5Vw'
-                },
-                body: JSON.stringify(addForm)
+                }
             });
 
-            const json = await res.json();
-            if (!res.ok) throw new Error(json.error || 'Failed to add customer');
+            if (funcError) throw funcError;
 
             setCustomers(prev => [json.user, ...prev]);
             setShowAddModal(false);
@@ -93,17 +79,15 @@ const AdminCustomers = () => {
             const { data: { session } } = await supabase.auth.getSession();
             const projectUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xyoidkfzbwsolaonpddk.supabase.co';
 
-            const res = await fetch(`${projectUrl}/functions/v1/get-customers?id=${deleteId}`, {
+            const { error: funcError } = await supabase.functions.invoke('get-customers', {
                 method: 'DELETE',
+                query: { id: deleteId },
                 headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json',
                     'apikey': 'sb_publishable_eEy_5GM0aN7PKnu2QNae3w_ioMyX5Vw'
                 }
             });
 
-            const json = await res.json();
-            if (!res.ok) throw new Error(json.error || 'Failed to delete user');
+            if (funcError) throw funcError;
 
             setCustomers(prev => prev.filter(c => c.id !== deleteId));
             setDeleteId(null);
