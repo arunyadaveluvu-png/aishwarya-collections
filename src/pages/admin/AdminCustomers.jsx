@@ -10,6 +10,8 @@ const AdminCustomers = () => {
     const [search, setSearch] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
     const [addForm, setAddForm] = useState({ email: '', password: '', name: '' });
+    const [deleteId, setDeleteId] = useState(null);
+    const [deleting, setDeleting] = useState(false);
     const [adding, setAdding] = useState(false);
 
     useEffect(() => {
