@@ -5,6 +5,17 @@ import { useAuth } from '../hooks/useAuth';
 import { useWishlist } from '../context/WishlistContext';
 import Logo from './Logo';
 
+const navLinks = [
+    { to: '/', label: 'Home' },
+    { to: '/?category=Silk', label: 'Silk' },
+    { to: '/?category=Cotton', label: 'Cotton' },
+    { to: '/?category=Designer', label: 'Designer' },
+    { to: '/?category=Wedding', label: 'Wedding' },
+    { to: '/?category=Party%20wear', label: 'Party Wear' },
+    { to: '/?category=Lehenga', label: 'Lehengas' },
+    { to: '/?category=Kurtis%20&%20Suits', label: 'Kurtis' },
+];
+
 const Header = ({ cartCount = 0 }) => {
     const [isOpen, setIsOpen] = React.useState(false);
     const [showSearch, setShowSearch] = React.useState(false);
@@ -25,6 +36,12 @@ const Header = ({ cartCount = 0 }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [showProfileMenu]);
 
+    // Prevent body scroll when mobile menu is open
+    React.useEffect(() => {
+        document.body.style.overflow = isOpen ? 'hidden' : '';
+        return () => { document.body.style.overflow = ''; };
+    }, [isOpen]);
+
     const handleSearch = (e) => {
         if (e.key === 'Enter' && searchQuery.trim()) {
             navigate(`/?search=${encodeURIComponent(searchQuery.trim())}`);
@@ -33,266 +50,289 @@ const Header = ({ cartCount = 0 }) => {
         }
     };
 
-    const handleWishlist = () => {
-        console.log('Wishlist icon clicked - placeholder function');
-    };
-
     const handleLogout = async () => {
-        console.log('[Header] Logout button clicked');
         setShowProfileMenu(false);
+        setIsOpen(false);
         try {
             await logout();
-            console.log('[Header] Logout successful, navigating...');
             navigate('/auth-selection');
         } catch (error) {
             console.error('[Header] Logout failed:', error);
-            // Even if it fails, clear the menu
-            setShowProfileMenu(false);
         }
     };
 
-    return (
-        <header className="glass-morphism" style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 1000,
-            padding: '1rem 0'
-        }}>
-            <div className="container" style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-            }}>
-                {/* Logo */}
-                <Link to="/" style={{ textDecoration: 'none' }}>
-                    <Logo size="medium" />
-                </Link>
+    const closeMobileMenu = () => setIsOpen(false);
 
-                {/* Desktop Navigation */}
-                <nav style={{
+    return (
+        <>
+            <header className="glass-morphism" style={{
+                position: 'sticky',
+                top: 0,
+                zIndex: 1000,
+                padding: '1rem 0'
+            }}>
+                <div className="container" style={{
                     display: 'flex',
-                    gap: '2rem',
-                    alignItems: 'center',
-                    flex: 1,
-                    justifyContent: 'center'
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
                 }}>
-                    <Link to="/" className="nav-link">Home</Link>
-                    <Link to="/?category=Silk" className="nav-link">Silk</Link>
-                    <Link to="/?category=Cotton" className="nav-link">Cotton</Link>
-                    <Link to="/?category=Designer" className="nav-link">Designer</Link>
-                    <Link to="/?category=Wedding" className="nav-link">Wedding</Link>
-                    <Link to="/?category=Party%20wear" className="nav-link">Party Wear</Link>
-                    <Link to="/?category=Lehenga" className="nav-link">Lehengas</Link>
-                    <Link to="/?category=Kurtis%20&%20Suits" className="nav-link">Kurtis</Link>
+                    {/* Logo */}
+                    <Link to="/" style={{ textDecoration: 'none' }} onClick={closeMobileMenu}>
+                        <Logo size="medium" />
+                    </Link>
+
+                    {/* Desktop Navigation */}
+                    <nav className="desktop-nav" style={{
+                        display: 'flex',
+                        gap: '1.5rem',
+                        alignItems: 'center',
+                        flex: 1,
+                        justifyContent: 'center'
+                    }}>
+                        {navLinks.map(link => (
+                            <Link key={link.to} to={link.to} className="nav-link">{link.label}</Link>
+                        ))}
+                        {isAdmin && (
+                            <Link to="/admin" className="nav-link" style={{
+                                color: 'var(--primary)',
+                                fontWeight: 'bold',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '5px'
+                            }}>
+                                <ShieldCheck size={16} />
+                                Admin
+                            </Link>
+                        )}
+                    </nav>
+
+                    {/* Actions */}
+                    <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center' }}>
+                        {/* Search */}
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                            {showSearch && (
+                                <input
+                                    type="text"
+                                    placeholder="Search..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onKeyDown={handleSearch}
+                                    style={{
+                                        padding: '5px 10px',
+                                        borderRadius: '20px',
+                                        border: '1px solid var(--border)',
+                                        marginRight: '10px',
+                                        width: '130px',
+                                        fontSize: '0.8rem',
+                                    }}
+                                    autoFocus
+                                />
+                            )}
+                            <Search size={20} color="var(--secondary)" style={{ cursor: 'pointer' }}
+                                onClick={() => setShowSearch(!showSearch)} />
+                        </div>
+
+                        {/* Wishlist */}
+                        <Link to="/account/wishlist" style={{ position: 'relative', color: 'inherit', textDecoration: 'none' }}>
+                            <Heart size={20} color="var(--secondary)" style={{ cursor: 'pointer' }} />
+                            {wishlist && wishlist.length > 0 && (
+                                <span style={{
+                                    position: 'absolute', top: '-8px', right: '-8px',
+                                    backgroundColor: 'var(--accent)', color: 'white',
+                                    fontSize: '10px', borderRadius: '50%',
+                                    width: '16px', height: '16px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}>{wishlist.length}</span>
+                            )}
+                        </Link>
+
+                        {/* User */}
+                        {user ? (
+                            <div className="user-menu-container" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <User size={20} color="var(--primary)" style={{ cursor: 'pointer' }}
+                                    onClick={() => setShowProfileMenu(!showProfileMenu)} />
+                                {showProfileMenu && (
+                                    <div style={{
+                                        position: 'absolute', top: '100%', right: 0,
+                                        marginTop: '10px', background: 'white',
+                                        borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                                        padding: '0.5rem', minWidth: '180px',
+                                        display: 'flex', flexDirection: 'column', gap: '5px',
+                                        zIndex: 1100, border: '1px solid var(--border)'
+                                    }}>
+                                        <div style={{ padding: '10px 15px', fontSize: '0.8rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
+                                            {user.email?.split('@')[0] || 'User'}
+                                        </div>
+                                        <Link to="/account/orders" style={{ padding: '10px 15px', textDecoration: 'none', color: 'var(--secondary)', fontSize: '0.9rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}
+                                            onClick={() => setShowProfileMenu(false)}>
+                                            <ShoppingCart size={16} /> My Orders
+                                        </Link>
+                                        <Link to="/account/wishlist" style={{ padding: '10px 15px', textDecoration: 'none', color: 'var(--secondary)', fontSize: '0.9rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}
+                                            onClick={() => setShowProfileMenu(false)}>
+                                            <Heart size={16} /> My Favorites
+                                        </Link>
+                                        <button onClick={handleLogout} style={{
+                                            padding: '10px 15px', background: 'none', border: 'none',
+                                            textAlign: 'left', color: 'var(--accent)', fontSize: '0.9rem',
+                                            borderRadius: '8px', display: 'flex', alignItems: 'center',
+                                            gap: '10px', cursor: 'pointer'
+                                        }}>
+                                            <LogOut size={16} /> Logout
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <Link to="/auth-selection" style={{ textDecoration: 'none', color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <User size={20} />
+                                <span className="login-text" style={{ fontSize: '0.9rem', fontWeight: '500' }}>Login</span>
+                            </Link>
+                        )}
+
+                        {/* Cart */}
+                        <Link to="/cart" style={{ position: 'relative', color: 'inherit', textDecoration: 'none' }}>
+                            <ShoppingCart size={20} color="var(--secondary)" style={{ cursor: 'pointer' }} />
+                            <span style={{
+                                position: 'absolute', top: '-8px', right: '-8px',
+                                backgroundColor: 'var(--primary)', color: 'white',
+                                fontSize: '10px', borderRadius: '50%',
+                                width: '16px', height: '16px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>{cartCount}</span>
+                        </Link>
+
+                        {/* Hamburger - mobile only */}
+                        <button
+                            className="hamburger-btn"
+                            onClick={() => setIsOpen(!isOpen)}
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                display: 'none', padding: '4px', color: 'var(--secondary)'
+                            }}
+                        >
+                            {isOpen ? <X size={26} /> : <Menu size={26} />}
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            {/* Mobile Drawer Overlay */}
+            {isOpen && (
+                <div
+                    onClick={closeMobileMenu}
+                    style={{
+                        position: 'fixed', inset: 0,
+                        background: 'rgba(0,0,0,0.4)',
+                        zIndex: 1200,
+                        backdropFilter: 'blur(2px)'
+                    }}
+                />
+            )}
+
+            {/* Mobile Drawer */}
+            <div style={{
+                position: 'fixed',
+                top: 0, right: 0,
+                height: '100vh',
+                width: '80%',
+                maxWidth: '320px',
+                background: 'white',
+                zIndex: 1300,
+                transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
+                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: '-4px 0 30px rgba(0,0,0,0.15)',
+                display: 'flex',
+                flexDirection: 'column',
+                overflowY: 'auto'
+            }}>
+                {/* Drawer Header */}
+                <div style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '1.2rem 1.5rem',
+                    borderBottom: '1px solid var(--border)'
+                }}>
+                    <Logo size="small" />
+                    <button onClick={closeMobileMenu} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                        <X size={24} color="var(--secondary)" />
+                    </button>
+                </div>
+
+                {/* User Info */}
+                {user && (
+                    <div style={{ padding: '1rem 1.5rem', background: '#fafafa', borderBottom: '1px solid var(--border)' }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Signed in as</div>
+                        <div style={{ fontWeight: '600', color: 'var(--secondary)' }}>{user.email?.split('@')[0]}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>{role}</div>
+                    </div>
+                )}
+
+                {/* Nav Links */}
+                <nav style={{ padding: '1rem 0', flex: 1 }}>
+                    <div style={{ padding: '0.5rem 1.5rem', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '600' }}>
+                        Shop
+                    </div>
+                    {navLinks.map(link => (
+                        <Link
+                            key={link.to}
+                            to={link.to}
+                            onClick={closeMobileMenu}
+                            style={{
+                                display: 'block',
+                                padding: '0.8rem 1.5rem',
+                                textDecoration: 'none',
+                                color: 'var(--secondary)',
+                                fontSize: '1rem',
+                                fontWeight: '500',
+                                borderBottom: '1px solid #f5f5f5',
+                                transition: 'background 0.2s'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                            {link.label}
+                        </Link>
+                    ))}
                     {isAdmin && (
-                        <Link to="/admin" className="nav-link" style={{
+                        <Link to="/admin" onClick={closeMobileMenu} style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '0.8rem 1.5rem',
+                            textDecoration: 'none',
                             color: 'var(--primary)',
-                            fontWeight: 'bold',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px'
+                            fontSize: '1rem',
+                            fontWeight: '600',
+                            borderBottom: '1px solid #f5f5f5',
                         }}>
-                            <ShieldCheck size={16} />
-                            Admin
+                            <ShieldCheck size={16} /> Admin Panel
                         </Link>
                     )}
                 </nav>
 
-                {/* Actions */}
-                <div style={{
-                    display: 'flex',
-                    gap: '1.2rem',
-                    alignItems: 'center'
-                }}>
-                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                        {showSearch && (
-                            <input
-                                type="text"
-                                placeholder="Search sarees..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyDown={handleSearch}
-                                style={{
-                                    padding: '5px 10px',
-                                    borderRadius: '20px',
-                                    border: '1px solid var(--border)',
-                                    marginRight: '10px',
-                                    width: '150px',
-                                    fontSize: '0.8rem',
-                                    animation: 'fadeIn 0.3s ease'
-                                }}
-                                autoFocus
-                            />
-                        )}
-                        <Search
-                            size={20}
-                            color="var(--secondary)"
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => setShowSearch(!showSearch)}
-                        />
-                    </div>
-
-                    <Link to="/account/wishlist" style={{ position: 'relative', color: 'inherit', textDecoration: 'none' }}>
-                        <Heart
-                            size={20}
-                            color="var(--secondary)"
-                            style={{ cursor: 'pointer' }}
-                        />
-                        {wishlist && wishlist.length > 0 && (
-                            <span style={{
-                                position: 'absolute',
-                                top: '-8px',
-                                right: '-8px',
-                                backgroundColor: 'var(--accent)',
-                                color: 'white',
-                                fontSize: '10px',
-                                borderRadius: '50%',
-                                width: '16px',
-                                height: '16px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}>{wishlist.length}</span>
-                        )}
-                    </Link>
-
+                {/* Mobile Account Actions */}
+                <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                     {user ? (
-                        <div className="user-menu-container" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', cursor: 'pointer' }} onClick={() => setShowProfileMenu(!showProfileMenu)}>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--secondary)' }}>
-                                    {user.email?.split('@')[0] || 'User'}
-                                </span>
-                                <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--primary)' }}>
-                                    {role}
-                                </span>
-                            </div>
-                            <User
-                                size={20}
-                                color="var(--primary)"
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                                title={user.email}
-                            />
-
-                            {/* Profile Dropdown */}
-                            {showProfileMenu && (
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '100%',
-                                    right: 0,
-                                    marginTop: '10px',
-                                    background: 'white',
-                                    borderRadius: '12px',
-                                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                                    padding: '0.5rem',
-                                    minWidth: '180px',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '5px',
-                                    zIndex: 1100,
-                                    border: '1px solid var(--border)',
-                                    animation: 'slideInDown 0.2s ease'
-                                }}>
-                                    <Link
-                                        to="/account/orders"
-                                        style={{
-                                            padding: '10px 15px',
-                                            textDecoration: 'none',
-                                            color: 'var(--secondary)',
-                                            fontSize: '0.9rem',
-                                            borderRadius: '8px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '10px',
-                                            transition: 'background 0.2s'
-                                        }}
-                                        onClick={() => setShowProfileMenu(false)}
-                                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f8f9fa'}
-                                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                                    >
-                                        <ShoppingCart size={16} />
-                                        My Orders
-                                    </Link>
-                                    <Link
-                                        to="/account/wishlist"
-                                        style={{
-                                            padding: '10px 15px',
-                                            textDecoration: 'none',
-                                            color: 'var(--secondary)',
-                                            fontSize: '0.9rem',
-                                            borderRadius: '8px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '10px',
-                                            transition: 'background 0.2s'
-                                        }}
-                                        onClick={() => setShowProfileMenu(false)}
-                                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f8f9fa'}
-                                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                                    >
-                                        <Heart size={16} />
-                                        My Favorites
-                                    </Link>
-                                    <div style={{ height: '1px', background: 'var(--border)', margin: '5px 0' }}></div>
-                                    <button
-                                        onClick={handleLogout}
-                                        style={{
-                                            padding: '10px 15px',
-                                            background: 'none',
-                                            border: 'none',
-                                            textAlign: 'left',
-                                            color: 'var(--accent)',
-                                            fontSize: '0.9rem',
-                                            borderRadius: '8px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '10px',
-                                            cursor: 'pointer',
-                                            transition: 'background 0.2s'
-                                        }}
-                                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fff5f5'}
-                                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                                    >
-                                        <LogOut size={16} />
-                                        Logout
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                        <>
+                            <Link to="/account/orders" onClick={closeMobileMenu} style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: 'var(--secondary)', fontSize: '0.95rem' }}>
+                                <ShoppingCart size={18} /> My Orders
+                            </Link>
+                            <Link to="/account/wishlist" onClick={closeMobileMenu} style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: 'var(--secondary)', fontSize: '0.95rem' }}>
+                                <Heart size={18} /> My Favorites
+                            </Link>
+                            <button onClick={handleLogout} style={{
+                                display: 'flex', alignItems: 'center', gap: '10px',
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                color: 'var(--accent)', fontSize: '0.95rem', padding: 0
+                            }}>
+                                <LogOut size={18} /> Logout
+                            </button>
+                        </>
                     ) : (
-                        <Link to="/auth-selection" style={{ textDecoration: 'none', color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <User size={20} />
-                            <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>Login</span>
+                        <Link to="/auth-selection" onClick={closeMobileMenu} style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: 'var(--secondary)', fontWeight: '600', fontSize: '1rem' }}>
+                            <User size={18} /> Login / Register
                         </Link>
                     )}
-
-                    <Link to="/cart" style={{ position: 'relative', color: 'inherit', textDecoration: 'none' }}>
-                        <ShoppingCart size={20} color="var(--secondary)" style={{ cursor: 'pointer' }} />
-                        <span style={{
-                            position: 'absolute',
-                            top: '-8px',
-                            right: '-8px',
-                            backgroundColor: 'var(--primary)',
-                            color: 'white',
-                            fontSize: '10px',
-                            borderRadius: '50%',
-                            width: '16px',
-                            height: '16px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}>{cartCount}</span>
-                    </Link>
-
-                    <button
-                        style={{ display: 'none' }} // Toggle for mobile
-                        onClick={() => setIsOpen(!isOpen)}
-                    >
-                        {isOpen ? <X size={24} /> : <Menu size={24} />}
-                    </button>
                 </div>
             </div>
-        </header>
+        </>
     );
 };
 

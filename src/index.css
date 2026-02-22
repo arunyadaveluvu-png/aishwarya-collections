@@ -234,6 +234,50 @@ button {
 
 @media (max-width: 768px) {
   .container {
-    padding: 1rem !important;
+    padding: 0 1rem !important;
+  }
+
+  /* Show hamburger, hide desktop nav */
+  .hamburger-btn {
+    display: flex !important;
+  }
+
+  .desktop-nav {
+    display: none !important;
+  }
+
+  /* Hide login text label on mobile */
+  .login-text {
+    display: none !important;
+  }
+
+  /* Footer responsive */
+  .footer-grid {
+    grid-template-columns: 1fr !important;
+    gap: 2.5rem !important;
+    text-align: center;
+  }
+
+  .footer-brand {
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  .footer-brand p {
+    max-width: 100% !important;
+    margin: 0 auto;
+  }
+
+  .footer-grid ul {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0;
+  }
+
+  .newsletter-container {
+    max-width: 100%;
+    margin: 0 auto;
+    width: 100%;
   }
 }
