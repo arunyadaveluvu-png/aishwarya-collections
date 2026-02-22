@@ -152,33 +152,26 @@ const Checkout = ({ cart, setCart }) => {
 
             if (itemsError) throw itemsError;
 
-            // Decrement inventory for each item
+            // Decrement stock for each ordered item directly
             for (const item of items) {
-                const { error: stockError } = await supabase.rpc('decrement_stock', {
-                    row_id: item.product_id,
-                    amount: item.quantity
-                });
+                // Fetch current stock first
+                const { data: currentProduct } = await supabase
+                    .from('products')
+                    .select('stock')
+                    .eq('id', item.product_id)
+                    .single();
 
-                // Fallback if RPC is not available
-                if (stockError) {
-                    console.warn("RPC decrement failed, trying direct update:", stockError.message);
-                    const { data: currentProduct } = await supabase
+                if (currentProduct) {
+                    const newStock = Math.max(0, (currentProduct.stock || 0) - item.quantity);
+                    await supabase
                         .from('products')
-                        .select('stock')
-                        .eq('id', item.product_id)
-                        .single();
-
-                    if (currentProduct) {
-                        await supabase
-                            .from('products')
-                            .update({ stock: Math.max(0, (currentProduct.stock || 0) - item.quantity) })
-                            .eq('id', item.product_id);
-                    }
+                        .update({ stock: newStock })
+                        .eq('id', item.product_id);
                 }
             }
 
             setCart([]);
-            navigate("/account/orders");
+            navigate("/order-success");
 
         } catch (error) {
             console.error("Order Error:", error);

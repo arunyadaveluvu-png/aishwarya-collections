@@ -101,11 +101,26 @@ const ProductCard = ({ product, addToCart }) => {
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>{product.category}</span>
                     <h3 style={{ fontSize: '1.1rem', margin: '0.5rem 0', color: 'var(--secondary)' }}>{product.name}</h3>
                     <p style={{ fontWeight: 'bold', color: 'var(--primary-dark)', fontSize: '1.2rem' }}>₹{product.price}</p>
+                    {/* Stock badge */}
+                    {(() => {
+                        const stock = product.stock ?? product.quantity ?? null;
+                        if (stock === null) return null;
+                        if (stock === 0) return (
+                            <span style={{ display: 'inline-block', marginTop: '4px', padding: '3px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '600', backgroundColor: '#fee2e2', color: '#991b1b' }}>Out of Stock</span>
+                        );
+                        if (stock <= 5) return (
+                            <span style={{ display: 'inline-block', marginTop: '4px', padding: '3px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '600', backgroundColor: '#fef3c7', color: '#92400e' }}>Only {stock} left!</span>
+                        );
+                        return (
+                            <span style={{ display: 'inline-block', marginTop: '4px', padding: '3px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '600', backgroundColor: '#dcfce7', color: '#166534' }}>In Stock ({stock})</span>
+                        );
+                    })()}
                 </Link>
                 <button
                     className="btn-primary"
-                    style={{ width: '100%', marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
-                    onClick={() => addToCart(product)}
+                    style={{ width: '100%', marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', opacity: (product.stock === 0) ? 0.5 : 1, cursor: (product.stock === 0) ? 'not-allowed' : 'pointer' }}
+                    onClick={() => { if ((product.stock ?? 1) > 0) addToCart(product); }}
+                    disabled={product.stock === 0}
                 >
                     <ShoppingCart size={18} />
                     Add to Cart

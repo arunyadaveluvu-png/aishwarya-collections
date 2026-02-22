@@ -34,7 +34,29 @@ const ProductDetails = ({ addToCart }) => {
 
     useEffect(() => {
         fetchProduct();
-    }, [fetchProduct]);
+
+        // Subscribe to live stock updates for this product
+        const channel = supabase
+            .channel(`product-stock-${id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'products',
+                    filter: `id=eq.${id}`
+                },
+                (payload) => {
+                    // Update only the changed fields (especially stock) without a full refetch
+                    setProduct(prev => prev ? { ...prev, ...payload.new } : payload.new);
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [fetchProduct, id]);
 
     if (loading) return (
         <div className="container" style={{ padding: '10rem 0', textAlign: 'center' }}>
@@ -88,7 +110,34 @@ const ProductDetails = ({ addToCart }) => {
                 <div>
                     <span style={{ color: 'var(--primary)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '2px', fontSize: '0.9rem' }}>{product.category}</span>
                     <h1 className="product-details-title" style={{ fontSize: '3rem', margin: '1rem 0', lineHeight: '1.2' }}>{product.name}</h1>
-                    <p className="product-details-price" style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-dark)', marginBottom: '2rem' }}>₹{product.price}</p>
+                    <p className="product-details-price" style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-dark)', marginBottom: '0.75rem' }}>₹{product.price}</p>
+
+                    {/* Stock Availability Badge */}
+                    {(() => {
+                        const stock = product.stock ?? product.quantity ?? null;
+                        if (stock === null) return null;
+                        if (stock === 0) return (
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '600', backgroundColor: '#fee2e2', color: '#991b1b' }}>
+                                    ❌ Out of Stock
+                                </span>
+                            </div>
+                        );
+                        if (stock <= 5) return (
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '600', backgroundColor: '#fef3c7', color: '#92400e' }}>
+                                    ⚠️ Only {stock} pieces left — Order soon!
+                                </span>
+                            </div>
+                        );
+                        return (
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '600', backgroundColor: '#dcfce7', color: '#166534' }}>
+                                    ✅ In Stock ({stock} available)
+                                </span>
+                            </div>
+                        );
+                    })()}
 
                     <div style={{ marginBottom: '2.5rem' }}>
                         <h4 style={{ marginBottom: '1rem' }}>Description</h4>

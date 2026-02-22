@@ -107,11 +107,12 @@ const EditProduct = () => {
                 finalImageUrl = await uploadImage(imageFile);
             }
 
-            // Clean price (remove commas if any)
+            // Clean price and ensure stock is an integer
             const cleanProduct = {
                 ...product,
                 image_url: finalImageUrl,
-                price: parseFloat(product.price.toString().replace(/,/g, ''))
+                price: parseFloat(product.price.toString().replace(/,/g, '')),
+                stock: parseInt(product.stock, 10) || 0
             };
 
             const { error } = await supabase
