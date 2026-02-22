@@ -24,7 +24,7 @@ Deno.serve(async (req: Request) => {
     // 3. Security Check (Admin Only)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        return new Response(JSON.stringify({ error: "Unauthorized: Missing Authorization header" }), {
             status: 401,
             headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
@@ -34,7 +34,7 @@ Deno.serve(async (req: Request) => {
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        return new Response(JSON.stringify({ error: `Unauthorized: ${authError?.message || "Invalid token"}` }), {
             status: 401,
             headers: { ...corsHeaders, "Content-Type": "application/json" }
         });

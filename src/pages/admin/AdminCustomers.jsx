@@ -28,7 +28,8 @@ const AdminCustomers = () => {
             const res = await fetch(`${projectUrl}/functions/v1/get-customers`, {
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'apikey': 'sb_publishable_eEy_5GM0aN7PKnu2QNae3w_ioMyX5Vw'
                 }
             });
 
@@ -62,7 +63,8 @@ const AdminCustomers = () => {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'apikey': 'sb_publishable_eEy_5GM0aN7PKnu2QNae3w_ioMyX5Vw'
                 }
             });
 
