@@ -24,7 +24,6 @@ const EditProduct = () => {
         stock: 0,
         image_url: '',
         description: '',
-        material: '',
         rating: 4.5
     });
 
@@ -133,7 +132,23 @@ const EditProduct = () => {
         }
     };
 
-    const categories = ['Silk', 'Cotton', 'Designer', 'Wedding', 'Chiffon', 'Georgette', 'Lehenga', 'Kurtis & Suits'];
+    const categories = [
+        'Silk',
+        'Cotton',
+        'Designer',
+        'Wedding',
+        'Chiffon',
+        'Georgette',
+        'Banarasi',
+        'Kanjivaram',
+        'Pattu',
+        'Ready-to-Wear',
+        'Party Wear',
+        'Daily Wear',
+        'Handloom',
+        'Lehenga',
+        'Kurtis & Suits'
+    ];
 
     if (loading) {
         return (
@@ -238,17 +253,6 @@ const EditProduct = () => {
                             />
                         </div>
 
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Material</label>
-                            <input
-                                type="text"
-                                name="material"
-                                value={product.material || ''}
-                                onChange={handleChange}
-                                placeholder="e.g. Pure Georgette"
-                                style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
-                            />
-                        </div>
 
                         <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Description</label>
