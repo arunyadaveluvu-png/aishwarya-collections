@@ -36,7 +36,6 @@ const AdminLayout = () => {
         { label: 'Dashboard', path: '/admin', icon: LayoutDashboard },
         { label: 'Products', path: '/admin/products', icon: Package },
         { label: 'Orders', path: '/admin/orders', icon: ShoppingBag },
-        { label: 'Customers', path: '/admin/customers', icon: Users },
         { label: 'Add Product', path: '/admin/products/add', icon: PlusCircle },
         { label: 'Admins', path: '/admin/manage-admins', icon: ShieldCheck },
     ];
