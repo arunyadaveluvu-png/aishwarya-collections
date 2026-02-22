@@ -23,8 +23,7 @@ const AdminCustomers = () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error('Not authenticated');
 
-            const projectUrl = import.meta.env.VITE_SUPABASE_URL;
-            if (!projectUrl) throw new Error('Supabase URL (VITE_SUPABASE_URL) is not defined in environment variables.');
+            const projectUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xyoidkfzbwsolaonpddk.supabase.co';
 
             const res = await fetch(`${projectUrl}/functions/v1/get-customers`, {
                 headers: {
@@ -57,7 +56,7 @@ const AdminCustomers = () => {
         try {
             setDeleting(true);
             const { data: { session } } = await supabase.auth.getSession();
-            const projectUrl = import.meta.env.VITE_SUPABASE_URL;
+            const projectUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xyoidkfzbwsolaonpddk.supabase.co';
 
             const res = await fetch(`${projectUrl}/functions/v1/get-customers?id=${deleteId}`, {
                 method: 'DELETE',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Mail, ArrowLeft, AlertCircle, CheckCircle2, Lock, Key, RefreshCw } from 'lucide-react';
+import { Mail, ArrowLeft, AlertCircle, CheckCircle2, Lock, Key, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ForgotPassword = () => {
@@ -10,6 +10,8 @@ const ForgotPassword = () => {
     const [otp, setOtp] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
@@ -218,20 +220,38 @@ const ForgotPassword = () => {
                                         <div style={{ position: 'relative' }}>
                                             <Lock size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                                             <input
-                                                type="password"
+                                                type={showPassword ? "text" : "password"}
                                                 required
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
                                                 placeholder="Min 6 characters"
                                                 style={{
                                                     width: '100%',
-                                                    padding: '12px 12px 12px 40px',
+                                                    padding: '12px 45px 12px 40px',
                                                     borderRadius: '8px',
                                                     border: '1px solid var(--border)',
                                                     fontSize: '1rem',
                                                     background: '#f9fafb'
                                                 }}
                                             />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                style={{
+                                                    position: 'absolute',
+                                                    right: '12px',
+                                                    top: '50%',
+                                                    transform: 'translateY(-50%)',
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    color: 'var(--text-muted)',
+                                                    display: 'flex',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            </button>
                                         </div>
                                     </div>
 
@@ -240,20 +260,38 @@ const ForgotPassword = () => {
                                         <div style={{ position: 'relative' }}>
                                             <Lock size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                                             <input
-                                                type="password"
+                                                type={showConfirmPassword ? "text" : "password"}
                                                 required
                                                 value={confirmPassword}
                                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                                 placeholder="Repeat password"
                                                 style={{
                                                     width: '100%',
-                                                    padding: '12px 12px 12px 40px',
+                                                    padding: '12px 45px 12px 40px',
                                                     borderRadius: '8px',
                                                     border: '1px solid var(--border)',
                                                     fontSize: '1rem',
                                                     background: '#f9fafb'
                                                 }}
                                             />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                style={{
+                                                    position: 'absolute',
+                                                    right: '12px',
+                                                    top: '50%',
+                                                    transform: 'translateY(-50%)',
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    color: 'var(--text-muted)',
+                                                    display: 'flex',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            </button>
                                         </div>
                                     </div>
 
