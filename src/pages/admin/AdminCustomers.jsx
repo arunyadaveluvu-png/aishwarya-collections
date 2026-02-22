@@ -8,8 +8,9 @@ const AdminCustomers = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [search, setSearch] = useState('');
-    const [deleteId, setDeleteId] = useState(null);
-    const [deleting, setDeleting] = useState(false);
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [addForm, setAddForm] = useState({ email: '', password: '', name: '' });
+    const [adding, setAdding] = useState(false);
 
     useEffect(() => {
         fetchCustomers();
@@ -49,6 +50,37 @@ const AdminCustomers = () => {
             setError(err.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleAddCustomer = async (e) => {
+        e.preventDefault();
+        try {
+            setAdding(true);
+            const { data: { session } } = await supabase.auth.getSession();
+            const projectUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xyoidkfzbwsolaonpddk.supabase.co';
+
+            const res = await fetch(`${projectUrl}/functions/v1/get-customers`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json',
+                    'apikey': 'sb_publishable_eEy_5GM0aN7PKnu2QNae3w_ioMyX5Vw'
+                },
+                body: JSON.stringify(addForm)
+            });
+
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'Failed to add customer');
+
+            setCustomers(prev => [json.user, ...prev]);
+            setShowAddModal(false);
+            setAddForm({ email: '', password: '', name: '' });
+            alert('Customer added successfully!');
+        } catch (err) {
+            alert(`Error: ${err.message}`);
+        } finally {
+            setAdding(false);
         }
     };
 
@@ -111,13 +143,23 @@ const AdminCustomers = () => {
     return (
         <div style={{ padding: '0', position: 'relative' }}>
             {/* Page Header */}
-            <div style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--secondary)', margin: '0 0 6px' }}>
-                    Customers
-                </h1>
-                <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>
-                    All registered users from Supabase Auth
-                </p>
+            <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                    <h1 style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--secondary)', margin: '0 0 6px' }}>
+                        Customers
+                    </h1>
+                    <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>
+                        All registered users from Supabase Auth
+                    </p>
+                </div>
+                <button
+                    onClick={() => setShowAddModal(true)}
+                    className="btn-primary"
+                    style={{ padding: '0.8rem 1.5rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                    <Users size={18} />
+                    Add Customer
+                </button>
             </div>
 
             {/* Stats Row */}
@@ -280,6 +322,88 @@ const AdminCustomers = () => {
                     </div>
                 </div>
             )}
+
+            {/* Add Customer Modal */}
+            <AnimatePresence>
+                {showAddModal && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        zIndex: 1000, padding: '20px'
+                    }}>
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            style={{
+                                background: '#fff', borderRadius: '16px', padding: '2rem',
+                                maxWidth: '450px', width: '100%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
+                            }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: 'var(--secondary)' }}>Add New Customer</h3>
+                                <button onClick={() => setShowAddModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleAddCustomer} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '6px', color: 'var(--secondary)' }}>Full Name</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. John Doe"
+                                        value={addForm.name}
+                                        onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))}
+                                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', boxSizing: 'border-box' }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '6px', color: 'var(--secondary)' }}>Email Address *</label>
+                                    <input
+                                        type="email"
+                                        required
+                                        placeholder="customer@example.com"
+                                        value={addForm.email}
+                                        onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))}
+                                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', boxSizing: 'border-box' }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '6px', color: 'var(--secondary)' }}>Password *</label>
+                                    <input
+                                        type="password"
+                                        required
+                                        placeholder="Min. 6 characters"
+                                        value={addForm.password}
+                                        onChange={e => setAddForm(f => ({ ...f, password: e.target.value }))}
+                                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', boxSizing: 'border-box' }}
+                                    />
+                                </div>
+
+                                <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAddModal(false)}
+                                        style={{ padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: '#fff', fontWeight: '600', cursor: 'pointer' }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={adding}
+                                        className="btn-primary"
+                                        style={{ padding: '12px', borderRadius: '10px', border: 'none', fontWeight: '600', cursor: 'pointer' }}
+                                    >
+                                        {adding ? 'Creating...' : 'Create Customer'}
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Deletion Confirmation Modal */}
             <AnimatePresence>

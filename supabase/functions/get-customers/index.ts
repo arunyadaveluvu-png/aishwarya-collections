@@ -45,6 +45,54 @@ Deno.serve(async (req: Request) => {
     // In a real app, you'd check a 'role' column in profiles.
 
     try {
+        // --- HANDLE POST (ADD CUSTOMER) ---
+        if (req.method === "POST") {
+            const { email, password, name } = await req.json();
+
+            if (!email || !password) {
+                return new Response(JSON.stringify({ error: "Email and password are required" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" }
+                });
+            }
+
+            // 1. Create User in Auth
+            const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+                email,
+                password,
+                email_confirm: true,
+                user_metadata: { role: 'customer' }
+            });
+
+            if (createError) throw createError;
+
+            // 2. Create/Update Profile
+            if (name) {
+                const { error: profileError } = await supabaseAdmin
+                    .from('profiles')
+                    .upsert({
+                        id: userData.user.id,
+                        full_name: name,
+                        email: email
+                    });
+                if (profileError) console.error("Profile creation error:", profileError);
+            }
+
+            return new Response(JSON.stringify({
+                message: "Customer created successfully",
+                user: {
+                    id: userData.user.id,
+                    email: userData.user.email,
+                    name: name,
+                    created_at: userData.user.created_at,
+                    orders: 0,
+                    total_spent: 0
+                }
+            }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+        }
+
         // --- HANDLE DELETE ---
         if (req.method === "DELETE") {
             const url = new URL(req.url);
