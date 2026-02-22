@@ -1,6 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import Razorpay from "https://esm.sh/razorpay@2.9.2";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -8,29 +6,53 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-    // Handle CORS preflight
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders });
     }
 
     try {
-        const razorpay = new Razorpay({
-            key_id: Deno.env.get("RAZORPAY_KEY_ID") || "",
-            key_secret: Deno.env.get("RAZORPAY_KEY_SECRET") || "",
-        });
+        const keyId = Deno.env.get("RAZORPAY_KEY_ID");
+        const keySecret = Deno.env.get("RAZORPAY_KEY_SECRET");
+
+        if (!keyId || !keySecret) {
+            console.error("Missing Razorpay API keys in environment variables");
+            return new Response(
+                JSON.stringify({ error: "Server Configuration Error: Razorpay keys not found" }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+            );
+        }
 
         const { action, amount, currency = "INR", receipt, paymentDetails } = await req.json();
+        const auth = btoa(`${keyId}:${keySecret}`);
 
         // 1. Create Order
         if (action === "create-order") {
-            const options = {
-                amount: Math.round(amount * 100), // Razorpay expects amount in paise
-                currency,
-                receipt,
-            };
+            console.log(`Creating Razorpay order for amount: ${amount}`);
 
-            const order = await razorpay.orders.create(options);
-            return new Response(JSON.stringify(order), {
+            const response = await fetch("https://api.razorpay.com/v1/orders", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Basic ${auth}`
+                },
+                body: JSON.stringify({
+                    amount: Math.round(amount * 100),
+                    currency,
+                    receipt
+                })
+            });
+
+            const orderData = await response.json();
+
+            if (!response.ok) {
+                console.error("Razorpay Order Creation Failed:", orderData);
+                return new Response(
+                    JSON.stringify({ error: orderData.error?.description || "Razorpay API Error" }),
+                    { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+                );
+            }
+
+            return new Response(JSON.stringify(orderData), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
                 status: 200,
             });
@@ -39,25 +61,17 @@ serve(async (req) => {
         // 2. Verify Payment
         if (action === "verify-payment") {
             const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = paymentDetails;
-
-            // Verification logic (Razorpay provides a utility, but we can also do it standardly)
-            const secret = Deno.env.get("RAZORPAY_KEY_SECRET") || "";
             const body = razorpay_order_id + "|" + razorpay_payment_id;
 
             const encoder = new TextEncoder();
             const key = await crypto.subtle.importKey(
                 "raw",
-                encoder.encode(secret),
+                encoder.encode(keySecret),
                 { name: "HMAC", hash: "SHA-256" },
                 false,
                 ["sign"]
             );
-            const signature = await crypto.subtle.sign(
-                "HMAC",
-                key,
-                encoder.encode(body)
-            );
-
+            const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
             const expectedSignature = Array.from(new Uint8Array(signature))
                 .map((b) => b.toString(16).padStart(2, "0"))
                 .join("");
@@ -81,6 +95,7 @@ serve(async (req) => {
         });
 
     } catch (error) {
+        console.error("Edge Function Exception:", error.message);
         return new Response(JSON.stringify({ error: error.message }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 500,
