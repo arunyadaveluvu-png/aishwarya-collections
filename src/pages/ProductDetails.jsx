@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { ShoppingCart, Heart, ArrowLeft } from 'lucide-react';
+import { ShoppingCart, Heart, ArrowLeft, Star, MessageSquare, Send, User } from 'lucide-react';
 import { useWishlist } from '../context/WishlistContext';
 
 const ProductDetails = ({ addToCart }) => {
@@ -12,6 +12,11 @@ const ProductDetails = ({ addToCart }) => {
     const { isInWishlist, toggleWishlist } = useWishlist();
     const isFavorited = id ? isInWishlist(id) : false;
     const [selectedSize, setSelectedSize] = useState(null);
+    const [reviews, setReviews] = useState([]);
+    const [reviewsLoading, setReviewsLoading] = useState(true);
+    const [submittingReview, setSubmittingReview] = useState(false);
+    const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
+    const [currentUser, setCurrentUser] = useState(null);
 
     const fetchProduct = useCallback(async () => {
         try {
@@ -32,8 +37,71 @@ const ProductDetails = ({ addToCart }) => {
         }
     }, [id]);
 
+    const fetchReviews = useCallback(async () => {
+        try {
+            setReviewsLoading(true);
+            const { data, error } = await supabase
+                .from('reviews')
+                .select(`
+                    *,
+                    profiles:user_id (full_name, avatar_url)
+                `)
+                .eq('product_id', id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            setReviews(data || []);
+        } catch (err) {
+            console.error("Error fetching reviews:", err.message);
+        } finally {
+            setReviewsLoading(false);
+        }
+    }, [id]);
+
+    const checkUser = useCallback(async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        setCurrentUser(user);
+    }, []);
+
+    const handleReviewSubmit = async (e) => {
+        e.preventDefault();
+        if (!currentUser) {
+            alert('Please login to leave a review.');
+            return;
+        }
+
+        if (!newReview.comment.trim()) {
+            alert('Please write a comment.');
+            return;
+        }
+
+        try {
+            setSubmittingReview(true);
+            const { error } = await supabase
+                .from('reviews')
+                .insert([{
+                    product_id: id,
+                    user_id: currentUser.id,
+                    rating: newReview.rating,
+                    comment: newReview.comment
+                }]);
+
+            if (error) throw error;
+
+            setNewReview({ rating: 5, comment: '' });
+            fetchReviews(); // Refresh reviews
+            alert('Review submitted successfully!');
+        } catch (err) {
+            alert('Error submitting review: ' + err.message);
+        } finally {
+            setSubmittingReview(false);
+        }
+    };
+
     useEffect(() => {
         fetchProduct();
+        fetchReviews();
+        checkUser();
 
         // Subscribe to live stock updates for this product
         const channel = supabase
@@ -236,6 +304,128 @@ const ProductDetails = ({ addToCart }) => {
                         <p style={{ fontSize: '0.9rem', fontStyle: 'italic' }}>
                             Pair this {product.name} with traditional gold jewelry and a contrasting blouse for a timeless, regal look.
                         </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Reviews Section */}
+            <div style={{ marginTop: '5rem', borderTop: '1px solid var(--border)', paddingTop: '4rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '4rem' }} className="reviews-grid">
+                    {/* Review Form */}
+                    <div>
+                        <h3 style={{ fontSize: '1.8rem', marginBottom: '1.5rem', fontFamily: 'serif' }}>Customer Reviews</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '2rem' }}>
+                            <div style={{ display: 'flex', color: 'var(--accent)' }}>
+                                {[1, 2, 3, 4, 5].map(star => {
+                                    const average = reviews.length > 0 ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length : 0;
+                                    return <Star key={star} size={20} fill={star <= average ? "var(--accent)" : "none"} />;
+                                })}
+                            </div>
+                            <span style={{ fontWeight: '600' }}>
+                                {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : 'No reviews yet'}
+                            </span>
+                            <span style={{ color: 'var(--text-muted)' }}>({reviews.length} reviews)</span>
+                        </div>
+
+                        {currentUser ? (
+                            <form onSubmit={handleReviewSubmit} className="glass-morphism" style={{ padding: '2rem', borderRadius: '12px' }}>
+                                <h4 style={{ marginBottom: '1.5rem' }}>Write a Review</h4>
+
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Rating</label>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        {[1, 2, 3, 4, 5].map(star => (
+                                            <button
+                                                key={star}
+                                                type="button"
+                                                onClick={() => setNewReview(prev => ({ ...prev, rating: star }))}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                            >
+                                                <Star
+                                                    size={24}
+                                                    fill={star <= newReview.rating ? "var(--accent)" : "none"}
+                                                    color={star <= newReview.rating ? "var(--accent)" : "#cbd5e1"}
+                                                />
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Comment</label>
+                                    <textarea
+                                        value={newReview.comment}
+                                        onChange={(e) => setNewReview(prev => ({ ...prev, comment: e.target.value }))}
+                                        rows="4"
+                                        placeholder="Share your thoughts about this saree..."
+                                        style={{ width: '100%', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', resize: 'vertical' }}
+                                    ></textarea>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={submittingReview}
+                                    className="btn-primary"
+                                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                                >
+                                    {submittingReview ? <div className="loading-spinner" style={{ width: '20px', height: '20px' }}></div> : (
+                                        <>
+                                            <Send size={18} />
+                                            Submit Review
+                                        </>
+                                    )}
+                                </button>
+                            </form>
+                        ) : (
+                            <div style={{ padding: '2rem', textAlign: 'center', backgroundColor: 'var(--bg-alt)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
+                                <MessageSquare size={32} color="var(--text-muted)" style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Only logged-in customers can leave a review.</p>
+                                <Link to="/login" className="btn-outline" style={{ display: 'inline-block', marginTop: '1rem', textDecoration: 'none', fontSize: '0.8rem' }}>Log In to Review</Link>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Review List */}
+                    <div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                            {reviewsLoading ? (
+                                <div style={{ textAlign: 'center', padding: '2rem' }}>
+                                    <div className="loading-spinner"></div>
+                                </div>
+                            ) : reviews.length > 0 ? (
+                                reviews.map((review) => (
+                                    <div key={review.id} style={{ paddingBottom: '2rem', borderBottom: '1px solid var(--border)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--bg-alt)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                                    {review.profiles?.avatar_url ? (
+                                                        <img src={review.profiles.avatar_url} alt={review.profiles.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        <User size={20} color="var(--text-muted)" />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{review.profiles?.full_name || 'Verified Customer'}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(review.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', color: 'var(--accent)' }}>
+                                                {[1, 2, 3, 4, 5].map(star => (
+                                                    <Star key={star} size={14} fill={star <= review.rating ? "var(--accent)" : "none"} />
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <p style={{ color: 'var(--text)', lineHeight: '1.6', fontSize: '0.95rem' }}>{review.comment}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div style={{ textAlign: 'center', padding: '4rem 2rem', backgroundColor: 'var(--bg-alt)', borderRadius: '12px' }}>
+                                    <Star size={40} color="var(--border)" style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                                    <h4>No reviews yet</h4>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Be the first to share your experience with this saree.</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
