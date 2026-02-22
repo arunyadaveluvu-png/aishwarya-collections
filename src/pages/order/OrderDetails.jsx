@@ -1,14 +1,28 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../supabase";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft, Package, MapPin, CreditCard } from "lucide-react";
+
+const STEPS = ["Pending", "Preparing", "Shipped", "Delivered"];
+
+const statusColors = {
+    Pending: { bg: "#fef9c3", color: "#854d0e" },
+    Preparing: { bg: "#dbeafe", color: "#1e40af" },
+    Shipped: { bg: "#e0e7ff", color: "#3730a3" },
+    Delivered: { bg: "#dcfce7", color: "#166534" },
+    Cancelled: { bg: "#fee2e2", color: "#991b1b" },
+};
+
+const stepIcons = ["🕐", "📦", "🚚", "✅"];
 
 const OrderDetails = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [order, setOrder] = useState(null);
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const [review, setReview] = useState({ rating: 5, comment: '', image: null });
+    const [review, setReview] = useState({ rating: 5, comment: "", image: null });
     const [submittingReview, setSubmittingReview] = useState(false);
     const [reviewedItems, setReviewedItems] = useState([]);
 
@@ -17,11 +31,38 @@ const OrderDetails = () => {
         checkExistingReviews();
     }, [id]);
 
+    const fetchOrder = async () => {
+        try {
+            setLoading(true);
+
+            const { data: orderData, error: orderError } = await supabase
+                .from("orders")
+                .select("*")
+                .eq("id", id)
+                .single();
+
+            if (orderError) throw orderError;
+            setOrder(orderData);
+
+            const { data: itemData, error: itemError } = await supabase
+                .from("order_items")
+                .select("*, products(name, image_url)")
+                .eq("order_id", id);
+
+            if (itemError) throw itemError;
+            setItems(itemData || []);
+        } catch (err) {
+            console.error("Error fetching order:", err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const checkExistingReviews = async () => {
         const { data } = await supabase
-            .from('product_reviews')
-            .select('product_id')
-            .eq('order_id', id);
+            .from("product_reviews")
+            .select("product_id")
+            .eq("order_id", id);
         setReviewedItems(data?.map(r => r.product_id) || []);
     };
 
@@ -33,198 +74,324 @@ const OrderDetails = () => {
 
             let imageUrl = null;
             if (review.image) {
-                const fileExt = review.image.name.split('.').pop();
+                const fileExt = review.image.name.split(".").pop();
                 const fileName = `${user.id}_${Date.now()}.${fileExt}`;
-                const filePath = `reviews/${fileName}`;
-
                 const { error: uploadError } = await supabase.storage
-                    .from('order-reviews')
-                    .upload(filePath, review.image);
-
+                    .from("order-reviews")
+                    .upload(`reviews/${fileName}`, review.image);
                 if (uploadError) throw uploadError;
-
                 const { data: { publicUrl } } = supabase.storage
-                    .from('order-reviews')
-                    .getPublicUrl(filePath);
+                    .from("order-reviews")
+                    .getPublicUrl(`reviews/${fileName}`);
                 imageUrl = publicUrl;
             }
 
-            const { error } = await supabase
-                .from('product_reviews')
-                .insert([{
-                    order_id: id,
-                    product_id: productId,
-                    user_id: user.id,
-                    rating: review.rating,
-                    comment: review.comment,
-                    image_url: imageUrl
-                }]);
+            const { error } = await supabase.from("product_reviews").insert([{
+                order_id: id,
+                product_id: productId,
+                user_id: user.id,
+                rating: review.rating,
+                comment: review.comment,
+                image_url: imageUrl
+            }]);
 
             if (error) throw error;
-
-            alert('Thank you for your review!');
-            setReviewedItems([...reviewedItems, productId]);
-            setReview({ rating: 5, comment: '', image: null });
+            alert("Thank you for your review!");
+            setReviewedItems(prev => [...prev, productId]);
+            setReview({ rating: 5, comment: "", image: null });
         } catch (err) {
-            alert('Error submitting review: ' + err.message);
+            alert("Error submitting review: " + err.message);
         } finally {
             setSubmittingReview(false);
         }
     };
 
-    const getStep = (status) => {
-        if (status === "Pending") return 1;
-        if (status === "Preparing") return 2;
-        if (status === "Shipped") return 3;
-        if (status === "Delivered") return 4;
-        return 1;
-    };
+    const getStep = (status) => Math.max(0, STEPS.indexOf(status));
 
-    if (loading) return <p style={{ padding: "4rem" }}>Loading...</p>;
-    if (!order) return <p style={{ padding: "4rem" }}>Order not found</p>;
+    if (loading) return (
+        <div style={{ padding: "4rem", textAlign: "center" }}>
+            <div className="loading-spinner" />
+            <p style={{ marginTop: "1rem", color: "var(--text-muted)" }}>Loading order details...</p>
+        </div>
+    );
+
+    if (!order) return (
+        <div style={{ padding: "4rem", textAlign: "center" }}>
+            <p>Order not found.</p>
+            <button className="btn" onClick={() => navigate("/account/orders")}>Back to Orders</button>
+        </div>
+    );
 
     const step = getStep(order.status);
+    const statusStyle = statusColors[order.status] || { bg: "#f3f4f6", color: "#374151" };
+    const shortId = order.id.slice(0, 8).toUpperCase();
+    const date = new Date(order.created_at).toLocaleDateString("en-IN", {
+        day: "numeric", month: "long", year: "numeric"
+    });
 
     return (
-        <div className="container" style={{ padding: "4rem 0", maxWidth: "1000px", margin: "auto" }}>
-            <h2 style={{ marginBottom: "2rem" }}>Order Details</h2>
+        <div style={{ padding: "clamp(1rem, 4vw, 4rem)", maxWidth: "900px", margin: "0 auto" }}>
 
-            {/* Tracking Section */}
+            {/* Back button */}
+            <button
+                onClick={() => navigate("/account/orders")}
+                style={{
+                    display: "inline-flex", alignItems: "center", gap: "6px",
+                    background: "none", border: "none", cursor: "pointer",
+                    color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "1.5rem", padding: 0
+                }}
+            >
+                <ArrowLeft size={16} /> Back to Orders
+            </button>
+
+            {/* Order Header */}
             <div style={{
-                marginBottom: "30px",
-                padding: "20px",
-                borderRadius: "12px",
-                background: "#fff",
-                boxShadow: "0 4px 15px rgba(0,0,0,0.05)"
+                background: "#fff", borderRadius: "16px", padding: "clamp(1rem, 3vw, 1.8rem)",
+                boxShadow: "0 4px 15px rgba(0,0,0,0.05)", marginBottom: "1.5rem",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                flexWrap: "wrap", gap: "12px"
             }}>
-                <h4>Order Tracking</h4>
+                <div>
+                    <h2 style={{ margin: "0 0 4px", fontSize: "clamp(1.1rem, 3.5vw, 1.5rem)" }}>
+                        Order #{shortId}
+                    </h2>
+                    <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Placed on {date}</span>
+                </div>
+                <span style={{
+                    padding: "6px 14px", borderRadius: "20px", fontWeight: "700", fontSize: "0.85rem",
+                    backgroundColor: statusStyle.bg, color: statusStyle.color
+                }}>
+                    {order.status}
+                </span>
+            </div>
 
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "15px" }}>
-                    {["Pending", "Preparing", "Shipped", "Delivered"].map((label, index) => (
-                        <div key={label} style={{ textAlign: "center", flex: 1 }}>
-                            <div
-                                style={{
-                                    width: "35px",
-                                    height: "35px",
-                                    borderRadius: "50%",
-                                    margin: "0 auto",
-                                    background: index + 1 <= step ? "#7a0000" : "#ccc",
-                                    transition: "0.3s ease"
-                                }}
-                            ></div>
-                            <p style={{ fontSize: "12px", marginTop: "8px" }}>{label}</p>
+            {/* ── Order Tracking ── */}
+            <div style={{
+                background: "#fff", borderRadius: "16px", padding: "clamp(1rem, 3vw, 1.8rem)",
+                boxShadow: "0 4px 15px rgba(0,0,0,0.05)", marginBottom: "1.5rem"
+            }}>
+                <h4 style={{ marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Package size={18} color="var(--primary)" /> Order Tracking
+                </h4>
+
+                {order.status === "Cancelled" ? (
+                    <div style={{
+                        textAlign: "center", padding: "1.5rem",
+                        background: "#fee2e2", borderRadius: "12px", color: "#991b1b"
+                    }}>
+                        ❌ This order has been cancelled.
+                    </div>
+                ) : (
+                    <>
+                        {/* Stepper — horizontal scrolls on small screens */}
+                        <div style={{ overflowX: "auto", paddingBottom: "4px" }}>
+                            <div style={{
+                                display: "flex",
+                                minWidth: "280px",
+                                position: "relative",
+                            }}>
+                                {/* Connecting line behind circles */}
+                                <div style={{
+                                    position: "absolute",
+                                    top: "17px",
+                                    left: "calc(12.5%)",
+                                    right: "calc(12.5%)",
+                                    height: "3px",
+                                    background: "#e5e7eb",
+                                    zIndex: 0
+                                }} />
+                                {/* Active progress line */}
+                                <div style={{
+                                    position: "absolute",
+                                    top: "17px",
+                                    left: "calc(12.5%)",
+                                    width: step > 0
+                                        ? `calc(${(step / (STEPS.length - 1)) * 75}%)`
+                                        : "0%",
+                                    height: "3px",
+                                    background: "var(--primary)",
+                                    transition: "width 0.5s ease",
+                                    zIndex: 1
+                                }} />
+
+                                {STEPS.map((label, index) => {
+                                    const done = index <= step;
+                                    return (
+                                        <div key={label} style={{ flex: 1, textAlign: "center", position: "relative", zIndex: 2 }}>
+                                            <div style={{
+                                                width: "36px", height: "36px", borderRadius: "50%",
+                                                margin: "0 auto",
+                                                background: done ? "var(--primary)" : "#e5e7eb",
+                                                color: done ? "#fff" : "#9ca3af",
+                                                display: "flex", alignItems: "center", justifyContent: "center",
+                                                fontSize: "1rem",
+                                                border: done ? "none" : "2px solid #e5e7eb",
+                                                transition: "background 0.3s ease",
+                                                boxShadow: index === step ? "0 0 0 4px rgba(212,175,55,0.2)" : "none"
+                                            }}>
+                                                {stepIcons[index]}
+                                            </div>
+                                            <p style={{
+                                                fontSize: "clamp(0.65rem, 2vw, 0.75rem)",
+                                                marginTop: "8px",
+                                                fontWeight: index === step ? "700" : "400",
+                                                color: done ? "var(--secondary)" : "#9ca3af",
+                                                whiteSpace: "nowrap"
+                                            }}>
+                                                {label}
+                                            </p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    ))}
+
+                        {/* Current status label */}
+                        <p style={{
+                            textAlign: "center", marginTop: "1.2rem",
+                            fontSize: "0.9rem", color: "var(--text-muted)"
+                        }}>
+                            {order.status === "Pending" && "We've received your order and are confirming payment."}
+                            {order.status === "Preparing" && "Your order is being carefully packed."}
+                            {order.status === "Shipped" && "Your order is on its way! Estimated delivery: 3-5 days."}
+                            {order.status === "Delivered" && "Your order has been delivered. Enjoy your purchase! ✨"}
+                        </p>
+                    </>
+                )}
+            </div>
+
+            {/* ── Delivery Address ── */}
+            <div style={{
+                background: "#fff", borderRadius: "16px", padding: "clamp(1rem, 3vw, 1.8rem)",
+                boxShadow: "0 4px 15px rgba(0,0,0,0.05)", marginBottom: "1.5rem",
+                display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem"
+            }}
+                className="order-info-grid"
+            >
+                <div>
+                    <h5 style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "10px" }}>
+                        <MapPin size={14} /> Delivery Address
+                    </h5>
+                    <p style={{ fontWeight: "700", margin: "0 0 4px" }}>{order.first_name} {order.last_name}</p>
+                    <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", margin: 0 }}>{order.address}</p>
+                    <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", margin: 0 }}>{order.city} — {order.pincode}</p>
+                </div>
+                <div>
+                    <h5 style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "10px" }}>
+                        <CreditCard size={14} /> Payment
+                    </h5>
+                    <p style={{ fontWeight: "700", margin: "0 0 4px", textTransform: "uppercase" }}>{order.payment_method}</p>
+                    <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", margin: "0 0 4px" }}>
+                        Total: <strong style={{ color: "var(--primary-dark)" }}>₹{Number(order.total).toLocaleString("en-IN")}</strong>
+                    </p>
                 </div>
             </div>
 
-            {/* Address Section */}
+            {/* ── Ordered Items ── */}
             <div style={{
-                background: "#f9f9f9",
-                padding: "20px",
-                borderRadius: "12px",
-                marginBottom: "30px"
+                background: "#fff", borderRadius: "16px", padding: "clamp(1rem, 3vw, 1.8rem)",
+                boxShadow: "0 4px 15px rgba(0,0,0,0.05)"
             }}>
-                <h4>Delivery Address</h4>
-                <p><strong>{order.first_name} {order.last_name}</strong></p>
-                <p>{order.address}</p>
-                <p>{order.city} - {order.pincode}</p>
-                <p><strong>Payment:</strong> {order.payment_method}</p>
-                <p><strong>Status:</strong> {order.status}</p>
-            </div>
+                <h4 style={{ marginBottom: "1.2rem" }}>Ordered Items</h4>
 
-            {/* Ordered Items */}
-            <h4>Ordered Items</h4>
+                {items.length === 0 ? (
+                    <p style={{ color: "var(--text-muted)" }}>No items found.</p>
+                ) : (
+                    items.map(item => (
+                        <div key={item.id} style={{
+                            borderBottom: "1px solid #f3f4f6", paddingBottom: "1.5rem", marginBottom: "1.5rem"
+                        }}>
+                            {/* Item Row */}
+                            <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start" }}>
+                                <img
+                                    src={item.products?.image_url}
+                                    alt={item.products?.name}
+                                    style={{
+                                        width: "clamp(70px, 15vw, 90px)",
+                                        height: "clamp(85px, 18vw, 110px)",
+                                        objectFit: "cover",
+                                        borderRadius: "10px",
+                                        flexShrink: 0
+                                    }}
+                                    onError={e => e.target.src = "https://placehold.co/90x110?text=No+Image"}
+                                />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <p style={{ fontWeight: "700", margin: "0 0 6px", fontSize: "clamp(0.9rem, 2.5vw, 1rem)" }}>
+                                        {item.products?.name || item.product_name}
+                                    </p>
+                                    <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", margin: "0 0 4px" }}>
+                                        Qty: {item.quantity}
+                                    </p>
+                                    <p style={{ color: "var(--primary-dark)", fontWeight: "700", margin: 0 }}>
+                                        ₹{Number(item.price).toLocaleString("en-IN")}
+                                    </p>
+                                    {item.selected_size && (
+                                        <span style={{
+                                            display: "inline-block", marginTop: "6px",
+                                            padding: "2px 8px", borderRadius: "4px",
+                                            background: "#f3f4f6", fontSize: "0.75rem", color: "#6b7280"
+                                        }}>
+                                            Size: {item.selected_size}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
 
-            {items.map(item => (
-                <div key={item.id} style={{
-                    borderBottom: "1px solid #ddd",
-                    padding: "20px 0"
-                }}>
-                    <div style={{ display: "flex", gap: "1.5rem", alignItems: "center", marginBottom: "15px" }}>
-                        <img
-                            src={item.products?.image_url}
-                            alt=""
-                            width="80"
-                            style={{ borderRadius: "8px" }}
-                        />
-                        <div>
-                            <p><strong>{item.products?.name}</strong></p>
-                            <p>Price: ₹{item.price}</p>
-                            <p>Quantity: {item.quantity}</p>
-                        </div>
-                    </div>
+                            {/* Review section — only for delivered items not yet reviewed */}
+                            {order.status === "Delivered" && !reviewedItems.includes(item.product_id) && (
+                                <div style={{
+                                    marginTop: "1rem", padding: "1.2rem",
+                                    background: "#f9fafb", borderRadius: "12px",
+                                    border: "1px solid #e5e7eb"
+                                }}>
+                                    <h5 style={{ margin: "0 0 12px", fontSize: "0.95rem" }}>⭐ Rate & Review</h5>
 
-                    {/* Rate & Review Section (Only for Delivered Items) */}
-                    {order.status === "Delivered" && !reviewedItems.includes(item.product_id) && (
-                        <div className="glass-morphism" style={{ padding: "1.5rem", marginTop: "1rem", borderRadius: "12px" }}>
-                            <h5 style={{ marginBottom: "10px" }}>Rate & Review</h5>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
-                                <div style={{ flex: 1, minWidth: "200px" }}>
-                                    <label style={{ fontSize: "0.8rem", display: "block", marginBottom: "5px" }}>Rating</label>
-                                    <div style={{ display: "flex", gap: "5px" }}>
+                                    {/* Stars */}
+                                    <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
                                         {[1, 2, 3, 4, 5].map(star => (
                                             <button
                                                 key={star}
-                                                onClick={() => setReview({ ...review, rating: star })}
+                                                onClick={() => setReview(prev => ({ ...prev, rating: star }))}
                                                 style={{
-                                                    background: "none",
-                                                    border: "none",
-                                                    cursor: "pointer",
-                                                    fontSize: "1.2rem",
-                                                    color: star <= review.rating ? "#f59e0b" : "#ccc"
+                                                    background: "none", border: "none",
+                                                    cursor: "pointer", fontSize: "1.4rem", padding: "0 2px",
+                                                    color: star <= review.rating ? "#f59e0b" : "#d1d5db"
                                                 }}
                                             >★</button>
                                         ))}
                                     </div>
+
                                     <textarea
                                         placeholder="Tell us what you liked about this saree..."
                                         value={review.comment}
-                                        onChange={(e) => setReview({ ...review, comment: e.target.value })}
-                                        style={{ width: "100%", marginTop: "10px", padding: "8px", borderRadius: "8px", border: "1px solid #ddd", height: "60px" }}
-                                    />
-                                </div>
-                                <div style={{ width: "150px" }}>
-                                    <label style={{ fontSize: "0.8rem", display: "block", marginBottom: "5px" }}>Add Photo</label>
-                                    <div
-                                        onClick={() => document.getElementById(`review-upload-${item.id}`).click()}
+                                        onChange={e => setReview(prev => ({ ...prev, comment: e.target.value }))}
                                         style={{
-                                            width: "100%", height: "100px", borderRadius: "8px", border: "1px dashed #ccc",
-                                            display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden"
+                                            width: "100%", padding: "10px", boxSizing: "border-box",
+                                            borderRadius: "8px", border: "1px solid #d1d5db",
+                                            height: "70px", resize: "vertical", fontSize: "0.9rem"
                                         }}
-                                    >
-                                        <input
-                                            id={`review-upload-${item.id}`}
-                                            type="file"
-                                            accept="image/*"
-                                            capture="environment"
-                                            onChange={(e) => setReview({ ...review, image: e.target.files[0] })}
-                                            style={{ display: "none" }}
-                                        />
-                                        {review.image ? (
-                                            <img src={URL.createObjectURL(review.image)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                        ) : (
-                                            <span style={{ fontSize: "1.5rem", color: "#ccc" }}>+</span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                            <button
-                                className="btn"
-                                disabled={submittingReview}
-                                onClick={() => handleReviewSubmit(item.product_id)}
-                                style={{ marginTop: "15px", width: "100%" }}
-                            >
-                                {submittingReview ? "Submitting..." : "Submit Review"}
-                            </button>
-                        </div>
-                    )}
+                                    />
 
-                    {reviewedItems.includes(item.product_id) && (
-                        <p style={{ color: "#10b981", fontSize: "0.9rem", marginTop: "10px", fontWeight: "600" }}>✓ You've reviewed this item</p>
-                    )}
-                </div>
-            ))}
+                                    <button
+                                        className="btn"
+                                        disabled={submittingReview}
+                                        onClick={() => handleReviewSubmit(item.product_id)}
+                                        style={{ marginTop: "10px", width: "100%" }}
+                                    >
+                                        {submittingReview ? "Submitting..." : "Submit Review"}
+                                    </button>
+                                </div>
+                            )}
+
+                            {reviewedItems.includes(item.product_id) && (
+                                <p style={{ color: "#10b981", fontSize: "0.9rem", marginTop: "10px", fontWeight: "600" }}>
+                                    ✓ You've reviewed this item
+                                </p>
+                            )}
+                        </div>
+                    ))
+                )}
+            </div>
         </div>
     );
 };
