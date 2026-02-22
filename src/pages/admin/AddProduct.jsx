@@ -20,8 +20,7 @@ const AddProduct = () => {
         price: '',
         stock: 10, // Default stock
         image_url: '',
-        description: '',
-        rating: 4.5
+        description: ''
     });
 
     const [imageFile, setImageFile] = useState(null);

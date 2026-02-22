@@ -23,8 +23,7 @@ const EditProduct = () => {
         price: '',
         stock: 0,
         image_url: '',
-        description: '',
-        rating: 4.5
+        description: ''
     });
 
     const [imageFile, setImageFile] = useState(null);
