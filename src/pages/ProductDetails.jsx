@@ -58,7 +58,7 @@ const ProductDetails = ({ addToCart }) => {
                 Back to Collection
             </Link>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '4rem' }}>
+            <div className="product-details-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '4rem' }}>
                 <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', boxShadow: 'var(--shadow)' }}>
                     <img
                         src={product.image_url || product.image}
@@ -87,8 +87,8 @@ const ProductDetails = ({ addToCart }) => {
 
                 <div>
                     <span style={{ color: 'var(--primary)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '2px', fontSize: '0.9rem' }}>{product.category}</span>
-                    <h1 style={{ fontSize: '3rem', margin: '1rem 0', lineHeight: '1.2' }}>{product.name}</h1>
-                    <p style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-dark)', marginBottom: '2rem' }}>₹{product.price}</p>
+                    <h1 className="product-details-title" style={{ fontSize: '3rem', margin: '1rem 0', lineHeight: '1.2' }}>{product.name}</h1>
+                    <p className="product-details-price" style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-dark)', marginBottom: '2rem' }}>₹{product.price}</p>
 
                     <div style={{ marginBottom: '2.5rem' }}>
                         <h4 style={{ marginBottom: '1rem' }}>Description</h4>

@@ -10,7 +10,7 @@ const Hero = () => {
     };
 
     return (
-        <section style={{
+        <section className="hero-section" style={{
             height: '80vh',
             display: 'flex',
             alignItems: 'center',
@@ -35,7 +35,7 @@ const Hero = () => {
                         display: 'block',
                         marginBottom: '1rem'
                     }}>New Collection 2026</span>
-                    <h1 style={{
+                    <h1 className="hero-title" style={{
                         fontSize: '4.5rem',
                         lineHeight: 1.1,
                         marginBottom: '1.5rem',
@@ -44,10 +44,10 @@ const Hero = () => {
                         The Art of <br />
                         <span style={{ fontStyle: 'italic', fontWeight: '300' }}>Timeless Elegance</span>
                     </h1>
-                    <p style={{ fontSize: '1.1rem', marginBottom: '2.5rem', opacity: 0.9 }}>
+                    <p className="hero-subtitle" style={{ fontSize: '1.1rem', marginBottom: '2.5rem', opacity: 0.9 }}>
                         Discover our curated collection of hand-woven masterpieces, where every thread tells a story of heritage and luxury.
                     </p>
-                    <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div className="hero-buttons" style={{ display: 'flex', gap: '1rem' }}>
                         <button className="btn-primary" style={{ padding: '16px 32px', fontSize: '1rem' }} onClick={scrollToShop}>Shop Now</button>
                         <button style={{
                             padding: '16px 32px',

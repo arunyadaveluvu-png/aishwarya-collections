@@ -1,0 +1,262 @@
+/* ============================================
+   VELOURA — COMPREHENSIVE MOBILE STYLES
+   Handles all pages on screens <= 768px
+   ============================================ */
+
+@media (max-width: 768px) {
+
+    /* ── Global ── */
+    .container {
+        padding: 0 1rem !important;
+    }
+
+    /* ── Hamburger / Nav ── */
+    .hamburger-btn {
+        display: flex !important;
+    }
+
+    .desktop-nav {
+        display: none !important;
+    }
+
+    .login-text {
+        display: none !important;
+    }
+
+    /* ── Product Grid ── */
+    .product-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 1rem !important;
+    }
+
+    /* ── Hero Section ── */
+    .hero-section {
+        height: 60vh !important;
+        min-height: 320px !important;
+    }
+
+    .hero-title {
+        font-size: 2.2rem !important;
+        line-height: 1.2 !important;
+    }
+
+    .hero-subtitle {
+        font-size: 0.9rem !important;
+        margin-bottom: 1.5rem !important;
+    }
+
+    .hero-buttons {
+        flex-direction: column !important;
+        gap: 0.8rem !important;
+    }
+
+    .hero-buttons button,
+    .hero-buttons a {
+        width: 100% !important;
+        text-align: center !important;
+    }
+
+    /* ── ProductDetails ── */
+    .product-details-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem !important;
+    }
+
+    .product-details-title {
+        font-size: 1.8rem !important;
+    }
+
+    .product-details-price {
+        font-size: 1.4rem !important;
+    }
+
+    /* ── Cart ── */
+    .cart-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem !important;
+    }
+
+    .cart-header {
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+    }
+
+    .cart-header h2 {
+        font-size: 1.6rem !important;
+    }
+
+    /* ── Checkout ── */
+    .checkout-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem !important;
+    }
+
+    /* ── Auth Pages ── */
+    .auth-container {
+        padding: 2rem 1rem !important;
+        margin: 0 !important;
+        width: 100% !important;
+        border-radius: 0 !important;
+    }
+
+    .auth-card {
+        padding: 1.5rem !important;
+        border-radius: 12px !important;
+        max-width: 100% !important;
+    }
+
+    /* ── Admin Dashboard Stats Grid ── */
+    .admin-stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 1rem !important;
+    }
+
+    .admin-table-wrapper {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    .admin-table {
+        min-width: 600px !important;
+    }
+
+    /* ── Admin Panel ── */
+    .admin-sidebar {
+        transform: translateX(-100%);
+        left: 0;
+    }
+
+    .admin-sidebar-open {
+        transform: translateX(0) !important;
+    }
+
+    .admin-overlay {
+        display: block !important;
+    }
+
+    .admin-main {
+        margin-left: 0 !important;
+        padding: 0 0 80px 0 !important;
+    }
+
+    .admin-topbar {
+        display: flex !important;
+    }
+
+    .admin-bottom-nav {
+        display: flex !important;
+    }
+
+    /* Admin recent section: stack on mobile */
+    .admin-recent-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Admin dashboard header wrap for date pickers */
+    .admin-dashboard-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 1rem !important;
+    }
+
+    .admin-date-filters {
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+    }
+
+    /* ── Footer ── */
+    .footer-grid {
+        grid-template-columns: 1fr !important;
+        gap: 2.5rem !important;
+        text-align: center;
+    }
+
+    .footer-brand {
+        align-items: center !important;
+        text-align: center !important;
+    }
+
+    .footer-brand p {
+        max-width: 100% !important;
+        margin: 0 auto;
+    }
+
+    .footer-grid ul {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0;
+    }
+
+    .newsletter-container {
+        max-width: 100%;
+        margin: 0 auto;
+        width: 100%;
+    }
+
+    /* ── Categories ── */
+    .categories-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 1rem !important;
+    }
+
+    .category-circle {
+        width: 90px !important;
+        height: 90px !important;
+    }
+
+    /* ── Orders / Wishlist Tables ── */
+    .responsive-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── General section padding ── */
+    section {
+        padding: 3rem 0 !important;
+    }
+
+    h1 {
+        font-size: 2rem !important;
+    }
+
+    h2 {
+        font-size: 1.6rem !important;
+    }
+
+    /* ── Product Card ── */
+    .product-card-title {
+        font-size: 0.9rem !important;
+    }
+
+    .product-card-price {
+        font-size: 1rem !important;
+    }
+
+    /* ── Buttons ── */
+    .btn-primary,
+    .btn-secondary {
+        font-size: 0.9rem !important;
+        padding: 10px 20px !important;
+    }
+}
+
+/* Extra small screens (< 400px) */
+@media (max-width: 400px) {
+    .product-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.6rem !important;
+    }
+
+    .hero-title {
+        font-size: 1.8rem !important;
+    }
+
+    .admin-stats-grid {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    .categories-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}

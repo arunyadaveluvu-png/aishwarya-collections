@@ -221,7 +221,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Stat Grid */}
-            <div style={{
+            <div className="admin-stats-grid" style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
                 gap: '1.5rem',
@@ -250,7 +250,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Recent Section */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
+            <div className="admin-recent-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
                 <div className="glass-morphism" style={{ padding: '2rem', borderRadius: '20px' }}>
                     <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <ShoppingBag size={20} color="var(--primary)" />

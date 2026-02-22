@@ -7,7 +7,7 @@ const Cart = ({ cart, removeFromCart, clearCart }) => {
 
     return (
         <div className="container" style={{ padding: '5rem 0', minHeight: '60vh' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div className="cart-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h2 style={{ fontSize: '2.5rem', margin: 0 }}>Your Shopping Cart</h2>
                 <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', textDecoration: 'none', fontWeight: 'bold' }}>
                     <ArrowLeft size={18} />
@@ -23,7 +23,7 @@ const Cart = ({ cart, removeFromCart, clearCart }) => {
                     </Link>
                 </div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
+                <div className="cart-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         {cart.map((item, index) => (
                             <div key={index} style={{ display: 'flex', gap: '1.5rem', backgroundColor: 'var(--white)', padding: '1rem', borderRadius: '8px', alignItems: 'center' }}>

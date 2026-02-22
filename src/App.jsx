@@ -14,6 +14,7 @@ import AdminProducts from './pages/admin/AdminProducts';
 import AdminOrders from './pages/admin/AdminOrders';
 import AddProduct from './pages/admin/AddProduct';
 import EditProduct from './pages/admin/EditProduct';
+import ManageAdmins from './pages/admin/ManageAdmins';
 import Checkout from './pages/checkout/Checkout';
 import OrderSuccess from './pages/order/OrderSuccess';
 import AuthSelection from './pages/auth/AuthSelection';
@@ -72,6 +73,7 @@ function App() {
                         <Route path="orders" element={<AdminOrders />} />
                         <Route path="products/add" element={<AddProduct />} />
                         <Route path="products/edit/:id" element={<EditProduct />} />
+                        <Route path="manage-admins" element={<ManageAdmins />} />
                     </Route>
                 </Route>
             </Routes>

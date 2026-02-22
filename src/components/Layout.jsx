@@ -4,11 +4,37 @@ import { useLocation } from 'react-router-dom';
 import Logo from './Logo';
 import SessionTimeoutModal from './SessionTimeoutModal';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../supabase';
 
 const Layout = ({ children, cartCount }) => {
     const location = useLocation();
     const isAdminRoute = location.pathname.startsWith('/admin');
     const { showTimeoutModal, resetTimer, logout } = useAuth();
+    const [email, setEmail] = React.useState('');
+    const [nlStatus, setNlStatus] = React.useState(''); // 'success' | 'error' | 'loading' | 'already'
+
+    const handleNewsletterJoin = async (e) => {
+        e.preventDefault();
+        if (!email.trim() || !email.includes('@')) {
+            setNlStatus('error');
+            return;
+        }
+        setNlStatus('loading');
+        const { error } = await supabase
+            .from('newsletter_subscribers')
+            .insert({ email: email.trim().toLowerCase() });
+        if (error) {
+            if (error.code === '23505') {
+                setNlStatus('already'); // unique violation = already subscribed
+            } else {
+                setNlStatus('error');
+            }
+        } else {
+            setNlStatus('success');
+            setEmail('');
+        }
+        setTimeout(() => setNlStatus(''), 4000);
+    };
 
     return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -45,7 +71,7 @@ const Layout = ({ children, cartCount }) => {
                         <h4 style={{ marginBottom: '1rem' }}>Customer Care</h4>
                         <ul style={{ listStyle: 'none', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
                             <li>Shipping Policy</li>
-                            <li>Returns & Exchanges</li>
+                            <li>Returns &amp; Exchanges</li>
                             <li>Sizing Guide</li>
                             <li>Contact Us</li>
                         </ul>
@@ -60,10 +86,13 @@ const Layout = ({ children, cartCount }) => {
                     </div>
                     <div className="newsletter-container">
                         <h4 style={{ marginBottom: '1rem' }}>Newsletter</h4>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <form onSubmit={handleNewsletterJoin} style={{ display: 'flex', gap: '8px' }}>
                             <input
                                 type="email"
                                 placeholder="Email Address"
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                                disabled={nlStatus === 'loading'}
                                 style={{
                                     padding: '8px 12px',
                                     borderRadius: '4px',
@@ -72,8 +101,30 @@ const Layout = ({ children, cartCount }) => {
                                     flex: 1
                                 }}
                             />
-                            <button className="btn-primary" style={{ padding: '8px 16px' }}>Join</button>
-                        </div>
+                            <button
+                                type="submit"
+                                className="btn-primary"
+                                disabled={nlStatus === 'loading'}
+                                style={{ padding: '8px 16px', cursor: nlStatus === 'loading' ? 'not-allowed' : 'pointer' }}
+                            >
+                                {nlStatus === 'loading' ? '...' : 'Join'}
+                            </button>
+                        </form>
+                        {nlStatus === 'success' && (
+                            <p style={{ color: '#276749', fontSize: '0.82rem', marginTop: '6px', fontWeight: '500' }}>
+                                ✅ You're subscribed! Thank you.
+                            </p>
+                        )}
+                        {nlStatus === 'already' && (
+                            <p style={{ color: '#975a16', fontSize: '0.82rem', marginTop: '6px', fontWeight: '500' }}>
+                                ℹ️ You're already subscribed.
+                            </p>
+                        )}
+                        {nlStatus === 'error' && (
+                            <p style={{ color: '#c53030', fontSize: '0.82rem', marginTop: '6px', fontWeight: '500' }}>
+                                ❌ Please enter a valid email.
+                            </p>
+                        )}
                     </div>
                 </div>
                 <div className="container" style={{

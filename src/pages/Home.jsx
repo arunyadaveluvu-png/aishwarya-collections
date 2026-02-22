@@ -110,7 +110,7 @@ const Home = ({ addToCart }) => {
                     )}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2.5rem' }}>
+                <div className="product-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '2rem' }}>
                     {productsLoading ? (
                         <div style={{ textAlign: 'center', gridColumn: '1/-1', padding: '3rem' }}>
                             <div className="loading-spinner"></div>
