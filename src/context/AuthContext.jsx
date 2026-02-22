@@ -161,6 +161,28 @@ export const AuthProvider = ({ children }) => {
         return data;
     }, []);
 
+    const sendPasswordResetOtp = useCallback(async (email) => {
+        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        if (error) throw error;
+    }, []);
+
+    const verifyOtp = useCallback(async (email, token, type = 'recovery') => {
+        const { data, error } = await supabase.auth.verifyOtp({
+            email,
+            token,
+            type
+        });
+        if (error) throw error;
+        return data;
+    }, []);
+
+    const updatePassword = useCallback(async (newPassword) => {
+        const { error } = await supabase.auth.updateUser({
+            password: newPassword
+        });
+        if (error) throw error;
+    }, []);
+
     const logout = useCallback(async () => {
         if (isLoggingOut.current) return;
 
@@ -205,10 +227,13 @@ export const AuthProvider = ({ children }) => {
             register,
             login,
             logout,
+            sendPasswordResetOtp,
+            verifyOtp,
+            updatePassword,
             resetTimer,
             refreshProfile: fetchProfile
         };
-    }, [user, profile, loading, showTimeoutModal, register, login, logout, resetTimer, fetchProfile]);
+    }, [user, profile, loading, showTimeoutModal, register, login, logout, sendPasswordResetOtp, verifyOtp, updatePassword, resetTimer, fetchProfile]);
 
     return (
         <AuthContext.Provider value={value}>
