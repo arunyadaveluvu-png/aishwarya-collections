@@ -118,6 +118,76 @@ const Checkout = ({ cart, setCart }) => {
                 }]);
             }
 
+            // 1. If COD, follow legacy flow
+            if (formData.paymentMethod === 'cod') {
+                await placeOrder(user, null);
+                return;
+            }
+
+            // 2. Handle Razorpay Payment
+            // Step A: Create Razorpay Order via Edge Function
+            const { data: rpOrder, error: rpError } = await supabase.functions.invoke('razorpay-checkout', {
+                body: {
+                    action: 'create-order',
+                    amount: total,
+                    receipt: `receipt_${Date.now()}`
+                }
+            });
+
+            if (rpError || !rpOrder) throw new Error(rpError?.message || "Failed to initiate payment");
+
+            // Step B: Open Razorpay Modal
+            const options = {
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_XXXXXXXXXXXXXX", // Fallback for testing UI
+                amount: rpOrder.amount,
+                currency: rpOrder.currency,
+                name: "Veloura",
+                description: "Aishwarya Collections Purchase",
+                order_id: rpOrder.id,
+                prefill: {
+                    name: `${formData.firstName} ${formData.lastName}`,
+                    email: user.email,
+                },
+                theme: { color: "#D4AF37" },
+                handler: async (response) => {
+                    try {
+                        setLoading(true);
+                        // Step C: Verify Payment via Edge Function
+                        const { data: verifyData, error: verifyError } = await supabase.functions.invoke('razorpay-checkout', {
+                            body: {
+                                action: 'verify-payment',
+                                paymentDetails: response
+                            }
+                        });
+
+                        if (verifyError || verifyData.status !== "success") {
+                            throw new Error("Payment verification failed");
+                        }
+
+                        // Step D: Place Final Order with Razorpay IDs
+                        await placeOrder(user, response);
+                    } catch (err) {
+                        alert("Verification Error: " + err.message);
+                        setLoading(false);
+                    }
+                },
+                modal: {
+                    ondismiss: () => setLoading(false)
+                }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+
+        } catch (error) {
+            console.error("Payment Initiation Error:", error);
+            alert("Payment failed to start: " + error.message);
+            setLoading(false);
+        }
+    };
+
+    const placeOrder = async (user, razorpayData = null) => {
+        try {
             const { data: order, error: orderError } = await supabase
                 .from("orders")
                 .insert([{
@@ -129,7 +199,10 @@ const Checkout = ({ cart, setCart }) => {
                     last_name: formData.lastName,
                     address: formData.address,
                     city: formData.city,
-                    pincode: formData.pincode
+                    pincode: formData.pincode,
+                    razorpay_order_id: razorpayData?.razorpay_order_id || null,
+                    razorpay_payment_id: razorpayData?.razorpay_payment_id || null,
+                    razorpay_signature: razorpayData?.razorpay_signature || null
                 }])
                 .select()
                 .single();
@@ -154,7 +227,6 @@ const Checkout = ({ cart, setCart }) => {
 
             // Decrement stock for each ordered item directly
             for (const item of items) {
-                // Fetch current stock first
                 const { data: currentProduct } = await supabase
                     .from('products')
                     .select('stock')
@@ -172,13 +244,12 @@ const Checkout = ({ cart, setCart }) => {
 
             setCart([]);
             navigate("/order-success");
-
         } catch (error) {
-            console.error("Order Error:", error);
-            alert("Something went wrong while placing order: " + error.message);
+            console.error("Order Completion Error:", error);
+            alert("Order placed but failed to save details: " + error.message);
+        } finally {
+            setLoading(false);
         }
-
-        setLoading(false);
     };
 
     if (cart.length === 0) {
