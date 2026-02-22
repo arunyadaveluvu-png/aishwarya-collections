@@ -31,45 +31,36 @@ const AdminDashboard = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                // Fetch total products
                 const { count: productCount } = await supabase
                     .from('products')
                     .select('*', { count: 'exact', head: true });
 
-                // Fetch total categories
                 const { data: catData } = await supabase
                     .from('categories')
                     .select('id');
 
-                // Fetch pending orders
                 const { count: pendingCount } = await supabase
                     .from('orders')
                     .select('*', { count: 'exact', head: true })
                     .eq('status', 'Pending');
 
-                // Fetch total sales
                 const { data: ordersData } = await supabase
                     .from('orders')
                     .select('total');
 
                 const totalSales = ordersData?.reduce((sum, order) => sum + Number(order.total || 0), 0) || 0;
 
-                // Fetch recent products
                 const { data: recentProducts } = await supabase
                     .from('products')
                     .select('*')
                     .order('created_at', { ascending: false })
                     .limit(5);
 
-                console.log('[Dashboard] Product Count:', productCount);
-                console.log('[Dashboard] Pending Orders Count:', pendingCount);
-                console.log('[Dashboard] Orders Data for Sales:', ordersData?.length);
-
                 setStats({
                     totalProducts: productCount || 0,
                     totalCategories: catData?.length || 0,
                     pendingOrders: pendingCount || 0,
-                    totalSales: totalSales,
+                    totalSales,
                     recentProducts: recentProducts || []
                 });
             } catch (error) {
@@ -99,12 +90,9 @@ const AdminDashboard = () => {
             }
 
             const doc = new jsPDF();
-
-            // PDF Header
             doc.setFontSize(22);
-            doc.setTextColor(122, 0, 0); // Primary Brand Color
+            doc.setTextColor(122, 0, 0);
             doc.text("AISHWARYA COLLECTIONS - SALES REPORT", 14, 20);
-
             doc.setFontSize(10);
             doc.setTextColor(100);
             doc.text(`Period: ${startDate} to ${endDate}`, 14, 28);
@@ -127,10 +115,7 @@ const AdminDashboard = () => {
                 theme: 'grid',
                 headStyles: { fillColor: [122, 0, 0], textColor: [255, 255, 255] },
                 styles: { fontSize: 8 },
-                columnStyles: {
-                    0: { cellWidth: 20 },
-                    3: { cellWidth: 50 }
-                }
+                columnStyles: { 0: { cellWidth: 20 }, 3: { cellWidth: 50 } }
             });
 
             doc.save(`Aishwarya_Collections_Report_${startDate}_to_${endDate}.pdf`);
@@ -145,18 +130,12 @@ const AdminDashboard = () => {
         if (window.confirm("This will clear your local application state and refresh the dashboard. Continue?")) {
             setLoading(true);
             try {
-                // Clear all browser storage to ensure a clean slate
                 localStorage.clear();
                 sessionStorage.clear();
-
-                // Attempt to sign out to release any server-side or navigator locks
                 await supabase.auth.signOut();
-
-                console.log('[AdminDashboard] Cache cleared and locks released.');
             } catch (err) {
                 console.warn('[AdminDashboard] Cache clear partial error:', err.message);
             } finally {
-                // Perform a hard redirect to ensure the lock manager and state are reset
                 window.location.href = '/';
             }
         }
@@ -178,116 +157,108 @@ const AdminDashboard = () => {
     }
 
     return (
-        <div>
-            <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '2rem'
-            }}>
+        <div className="dashboard-root">
+
+            {/* ── HEADER ── */}
+            <div className="dashboard-header">
                 <div>
-                    <h1 style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--secondary)' }}>Dashboard</h1>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Welcome back to your Aishwarya Collections management suite.</p>
+                    <h1 style={{ fontSize: '1.6rem', fontWeight: '700', color: 'var(--secondary)', margin: 0 }}>Dashboard</h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '4px' }}>
+                        Welcome back to your Aishwarya Collections admin suite.
+                    </p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>From:</label>
-                        <input
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            style={{ padding: '6px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.8rem' }}
-                        />
+
+                {/* Date + Report row */}
+                <div className="dashboard-actions">
+                    <div className="dashboard-date-row">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>From:</label>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.78rem', flex: 1 }}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>To:</label>
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.78rem', flex: 1 }}
+                            />
+                        </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>To:</label>
-                        <input
-                            type="date"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            style={{ padding: '6px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.8rem' }}
-                        />
-                    </div>
-                    <Link to="/admin/products/add" className="btn" style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '0.8rem 1.5rem'
-                    }}>
-                        <PlusCircle size={18} />
-                        Add New Product
+                    <Link to="/admin/products/add" className="btn dashboard-add-btn">
+                        <PlusCircle size={16} />
+                        Add Product
                     </Link>
                 </div>
             </div>
 
-            {/* Stat Grid */}
-            <div className="admin-stats-grid" style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                gap: '1.5rem',
-                marginBottom: '3rem'
-            }}>
+            {/* ── STAT CARDS ── */}
+            <div className="dashboard-stats-grid">
                 {statCards.map((card, index) => {
                     const Icon = card.icon;
                     return (
-                        <div key={index} className="glass-morphism" style={{ padding: '1.5rem', borderRadius: '16px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+                        <div key={index} className="glass-morphism dashboard-stat-card">
+                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.75rem' }}>
                                 <div style={{
                                     padding: '10px',
                                     borderRadius: '12px',
                                     backgroundColor: `${card.color}20`,
                                     color: card.color,
-                                    marginRight: '12px'
+                                    marginRight: '12px',
+                                    flexShrink: 0
                                 }}>
-                                    <Icon size={24} />
+                                    <Icon size={22} />
                                 </div>
-                                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>{card.label}</span>
+                                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '500' }}>{card.label}</span>
                             </div>
-                            <div style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--secondary)' }}>{card.value}</div>
+                            <div style={{ fontSize: '1.6rem', fontWeight: '700', color: 'var(--secondary)' }}>{card.value}</div>
                         </div>
                     );
                 })}
             </div>
 
-            {/* Recent Section */}
-            <div className="admin-recent-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
-                <div className="glass-morphism" style={{ padding: '2rem', borderRadius: '20px' }}>
-                    <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <ShoppingBag size={20} color="var(--primary)" />
+            {/* ── RECENT SECTION ── */}
+            <div className="dashboard-recent-grid">
+                {/* Recent Products Table */}
+                <div className="glass-morphism" style={{ padding: '1.5rem', borderRadius: '20px', overflow: 'hidden' }}>
+                    <h3 style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1rem' }}>
+                        <ShoppingBag size={18} color="var(--primary)" />
                         Recent Products
                     </h3>
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '400px' }}>
                             <thead>
                                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                    <th style={{ textAlign: 'left', padding: '1rem 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>PRODUCT</th>
-                                    <th style={{ textAlign: 'left', padding: '1rem 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>CATEGORY</th>
-                                    <th style={{ textAlign: 'left', padding: '1rem 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>PRICE</th>
-                                    <th style={{ textAlign: 'left', padding: '1rem 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>STATUS</th>
+                                    <th style={{ textAlign: 'left', padding: '0.75rem 0', color: 'var(--text-muted)', fontSize: '0.75rem' }}>PRODUCT</th>
+                                    <th style={{ textAlign: 'left', padding: '0.75rem 0', color: 'var(--text-muted)', fontSize: '0.75rem' }}>CAT</th>
+                                    <th style={{ textAlign: 'left', padding: '0.75rem 0', color: 'var(--text-muted)', fontSize: '0.75rem' }}>PRICE</th>
+                                    <th style={{ textAlign: 'left', padding: '0.75rem 0', color: 'var(--text-muted)', fontSize: '0.75rem' }}>STATUS</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {stats.recentProducts.map((product) => (
                                     <tr key={product.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-                                        <td style={{ padding: '1rem 0' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <td style={{ padding: '0.75rem 0' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                 <img
                                                     src={product.image_url || product.image || 'https://via.placeholder.com/150'}
                                                     alt={product.name}
-                                                    style={{ width: '40px', height: '50px', borderRadius: '4px', objectFit: 'cover' }}
-                                                    onError={(e) => {
-                                                        console.warn(`[Aishwarya Collections] Image failed to load in Dashboard view for product ${product.id}:`, product.image_url || product.image);
-                                                        e.target.src = 'https://via.placeholder.com/150';
-                                                    }}
+                                                    style={{ width: '36px', height: '44px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }}
+                                                    onError={(e) => { e.target.src = 'https://via.placeholder.com/150'; }}
                                                 />
-                                                <span style={{ fontWeight: '500', fontSize: '0.9rem' }}>{product.name}</span>
+                                                <span style={{ fontWeight: '500', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{product.name}</span>
                                             </div>
                                         </td>
-                                        <td style={{ padding: '1rem 0', fontSize: '0.9rem' }}>{product.category}</td>
-                                        <td style={{ padding: '1rem 0', fontSize: '0.9rem', fontWeight: '600' }}>₹{product.price}</td>
-                                        <td style={{ padding: '1rem 0' }}>
+                                        <td style={{ padding: '0.75rem 0', fontSize: '0.82rem' }}>{product.category}</td>
+                                        <td style={{ padding: '0.75rem 0', fontSize: '0.82rem', fontWeight: '600' }}>₹{product.price}</td>
+                                        <td style={{ padding: '0.75rem 0' }}>
                                             <span style={{
-                                                padding: '4px 10px',
+                                                padding: '3px 9px',
                                                 borderRadius: '20px',
                                                 fontSize: '0.7rem',
                                                 backgroundColor: '#dcfce7',
@@ -300,31 +271,29 @@ const AdminDashboard = () => {
                         </table>
                     </div>
                     <Link to="/admin/products" style={{
-                        display: 'block',
-                        textAlign: 'center',
-                        marginTop: '1.5rem',
-                        color: 'var(--primary)',
-                        textDecoration: 'none',
-                        fontSize: '0.9rem',
-                        fontWeight: '500'
-                    }}>View All Products</Link>
+                        display: 'block', textAlign: 'center', marginTop: '1.25rem',
+                        color: 'var(--primary)', textDecoration: 'none', fontSize: '0.88rem', fontWeight: '500'
+                    }}>
+                        View All Products →
+                    </Link>
                 </div>
 
-                <div className="glass-morphism" style={{ padding: '2rem', borderRadius: '20px' }}>
-                    <h3 style={{ marginBottom: '1.5rem' }}>Quick Actions</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {/* Quick Actions */}
+                <div className="glass-morphism" style={{ padding: '1.5rem', borderRadius: '20px' }}>
+                    <h3 style={{ marginBottom: '1.25rem', fontSize: '1rem' }}>Quick Actions</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         <Link to="/admin/products" className="btn-outline" style={{ textAlign: 'center' }}>Manage Inventory</Link>
                         <button onClick={handleDownloadReport} className="btn-outline">Download Report</button>
                         <button onClick={handleClearCache} className="btn-outline">Clear Cache</button>
                         <div style={{
-                            marginTop: '2rem',
-                            padding: '1.5rem',
+                            marginTop: '1.5rem',
+                            padding: '1.25rem',
                             backgroundColor: 'rgba(0,0,0,0.02)',
                             borderRadius: '12px',
                             border: '1px dashed var(--border)'
                         }}>
-                            <h4 style={{ fontSize: '0.9rem', marginBottom: '8px' }}>Store Status</h4>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Your store is currently public and accepting traffic.</p>
+                            <h4 style={{ fontSize: '0.88rem', marginBottom: '6px' }}>Store Status</h4>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Your store is live and accepting traffic.</p>
                         </div>
                     </div>
                 </div>

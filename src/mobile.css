@@ -3,6 +3,61 @@
    Handles all pages on screens <= 768px
    ============================================ */
 
+/* ── Dashboard Base (Desktop) ── */
+.dashboard-root {
+    padding: 0;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.dashboard-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.dashboard-date-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.dashboard-add-btn {
+    display: flex !important;
+    align-items: center;
+    gap: 6px;
+    padding: 0.6rem 1.1rem;
+    white-space: nowrap;
+    font-size: 0.88rem;
+}
+
+.dashboard-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+    margin-bottom: 2.5rem;
+}
+
+.dashboard-stat-card {
+    padding: 1.25rem;
+    border-radius: 16px;
+}
+
+.dashboard-recent-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+}
+
 @media (max-width: 768px) {
 
     /* ── Global ── */
@@ -106,9 +161,54 @@
     }
 
     /* ── Admin Dashboard Stats Grid ── */
+    .dashboard-stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.85rem !important;
+        margin-bottom: 1.5rem !important;
+    }
+
+    .dashboard-stat-card {
+        padding: 1rem !important;
+    }
+
+    .dashboard-header {
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+        margin-bottom: 1.25rem !important;
+    }
+
+    .dashboard-actions {
+        width: 100%;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.5rem !important;
+    }
+
+    .dashboard-date-row {
+        width: 100%;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 0.5rem !important;
+    }
+
+    .dashboard-add-btn {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    .dashboard-recent-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+
+    /* legacy fallbacks */
     .admin-stats-grid {
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 1rem !important;
+    }
+
+    .admin-recent-grid {
+        grid-template-columns: 1fr !important;
     }
 
     .admin-table-wrapper {
