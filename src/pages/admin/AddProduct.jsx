@@ -24,7 +24,7 @@ const AddProduct = () => {
         stock: 10,
         image_url: '',
         description: '',
-        sizes: []
+        sizes: {} // Changed to object for { "S": 10, "M": 5 }
     });
     const [parentCategory, setParentCategory] = useState(''); // 'Men' or 'Women'
 
@@ -84,7 +84,8 @@ const AddProduct = () => {
                 image_url: finalImageUrl,
                 price: parseFloat(product.price.toString().replace(/,/g, '')),
                 discount_price: product.discount_price ? parseFloat(product.discount_price.toString().replace(/,/g, '')) : null,
-                stock: parseInt(product.stock, 10) || 0
+                stock: parseInt(product.stock, 10) || 0,
+                sizes: product.sizes // This is now an object
             };
 
             const { error } = await supabase
@@ -169,9 +170,9 @@ const AddProduct = () => {
                                             const val = e.target.value;
                                             setParentCategory(val);
                                             if (val === 'Men' || val === 'Cosmetics') {
-                                                setProduct(prev => ({ ...prev, category: val, sizes: [] }));
+                                                setProduct(prev => ({ ...prev, category: val, sizes: {} }));
                                             } else {
-                                                setProduct(prev => ({ ...prev, category: '', sizes: [] }));
+                                                setProduct(prev => ({ ...prev, category: '', sizes: {} }));
                                             }
                                         }}
                                         required
@@ -191,7 +192,7 @@ const AddProduct = () => {
                                             value={product.category}
                                             onChange={(e) => {
                                                 const val = e.target.value;
-                                                setProduct(prev => ({ ...prev, category: val, sizes: [] }));
+                                                setProduct(prev => ({ ...prev, category: val, sizes: {} }));
                                             }}
                                             required
                                             style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'white' }}
@@ -209,36 +210,70 @@ const AddProduct = () => {
                     {/* Sizes Section */}
                     {(parentCategory === 'Men' || product.category === 'Dresses') && (
                         <div className="glass-morphism" style={{ padding: '2rem', borderRadius: '20px', backgroundColor: 'rgba(212, 175, 55, 0.05)' }}>
-                            <label style={{ display: 'block', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: '600', color: 'var(--primary)' }}>Select Available Sizes</label>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                            <label style={{ display: 'block', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: '600', color: 'var(--primary)' }}>Available Sizes & Quantities</label>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {['S', 'M', 'L', 'XL', 'XXL'].map(size => {
-                                    const isSelected = product.sizes.includes(size);
+                                    const isSelected = product.sizes.hasOwnProperty(size);
                                     return (
-                                        <button
-                                            key={size}
-                                            type="button"
-                                            onClick={() => {
-                                                setProduct(prev => {
-                                                    const newSizes = isSelected
-                                                        ? prev.sizes.filter(s => s !== size)
-                                                        : [...prev.sizes, size];
-                                                    return { ...prev, sizes: newSizes };
-                                                });
-                                            }}
-                                            style={{
-                                                padding: '10px 20px',
-                                                borderRadius: '10px',
-                                                border: `2px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
-                                                backgroundColor: isSelected ? 'var(--primary)' : 'white',
-                                                color: isSelected ? 'white' : 'var(--secondary)',
-                                                fontWeight: '700',
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s',
-                                                boxShadow: isSelected ? '0 4px 12px rgba(212, 175, 55, 0.2)' : 'none'
-                                            }}
-                                        >
-                                            {size}
-                                        </button>
+                                        <div key={size} style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                            <button
+                                                key={size}
+                                                type="button"
+                                                onClick={() => {
+                                                    setProduct(prev => {
+                                                        const newSizes = { ...prev.sizes };
+                                                        if (isSelected) {
+                                                            delete newSizes[size];
+                                                        } else {
+                                                            newSizes[size] = 10; // Default quantity
+                                                        }
+
+                                                        // Auto-calculate total stock
+                                                        const totalStock = Object.values(newSizes).reduce((a, b) => a + (parseInt(b) || 0), 0);
+
+                                                        return { ...prev, sizes: newSizes, stock: totalStock || prev.stock };
+                                                    });
+                                                }}
+                                                style={{
+                                                    padding: '10px 20px',
+                                                    borderRadius: '10px',
+                                                    border: `2px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
+                                                    backgroundColor: isSelected ? 'var(--primary)' : 'white',
+                                                    color: isSelected ? 'white' : 'var(--secondary)',
+                                                    fontWeight: '700',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    minWidth: '70px'
+                                                }}
+                                            >
+                                                {size}
+                                            </button>
+
+                                            {isSelected && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Quantity:</span>
+                                                    <input
+                                                        type="number"
+                                                        value={product.sizes[size]}
+                                                        onChange={(e) => {
+                                                            const val = parseInt(e.target.value) || 0;
+                                                            setProduct(prev => {
+                                                                const newSizes = { ...prev.sizes, [size]: val };
+                                                                const totalStock = Object.values(newSizes).reduce((a, b) => a + (parseInt(b) || 0), 0);
+                                                                return { ...prev, sizes: newSizes, stock: totalStock };
+                                                            });
+                                                        }}
+                                                        style={{
+                                                            width: '80px',
+                                                            padding: '6px 10px',
+                                                            borderRadius: '6px',
+                                                            border: '1px solid var(--border)',
+                                                            fontSize: '0.9rem'
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
                                     );
                                 })}
                             </div>

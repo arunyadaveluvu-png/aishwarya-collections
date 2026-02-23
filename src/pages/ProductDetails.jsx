@@ -16,13 +16,20 @@ const ProductDetails = ({ addToCart }) => {
     const [estimation, setEstimation] = useState(null);
 
     const handleCheckDelivery = () => {
-        if (pincode.length !== 6) {
-            alert('Please enter a valid 6-digit pincode');
+        // Strict 6-digit number check
+        if (!/^\d{6}$/.test(pincode) || pincode.startsWith('0')) {
+            setEstimation('Pincode does not exist');
             return;
         }
 
         const date = new Date();
         const options = { month: 'short', day: 'numeric' };
+
+        // Mock validation for "serviceability"
+        if (pincode === '000000' || pincode === '999999') {
+            setEstimation('Pincode does not exist');
+            return;
+        }
 
         if (pincode === '515701') {
             // Local: 2-3 days
@@ -30,12 +37,12 @@ const ProductDetails = ({ addToCart }) => {
             const maxDate = new Date(); maxDate.setDate(date.getDate() + 3);
             setEstimation(`Estimated delivery by ${minDate.toLocaleDateString('en-IN', options)} - ${maxDate.toLocaleDateString('en-IN', options)}`);
         } else if (['51', '52', '53', '56', '57', '58', '59', '60', '61', '62', '63', '64'].some(p => pincode.startsWith(p))) {
-            // South India (simplified check for 51-53, 56-64 prefixes)
+            // South India
             const minDate = new Date(); minDate.setDate(date.getDate() + 4);
             const maxDate = new Date(); maxDate.setDate(date.getDate() + 6);
             setEstimation(`Estimated delivery by ${minDate.toLocaleDateString('en-IN', options)} - ${maxDate.toLocaleDateString('en-IN', options)}`);
         } else {
-            // Rest of India: 8-10 days
+            // Rest of India
             const minDate = new Date(); minDate.setDate(date.getDate() + 8);
             const maxDate = new Date(); maxDate.setDate(date.getDate() + 10);
             setEstimation(`Estimated delivery by ${minDate.toLocaleDateString('en-IN', options)} - ${maxDate.toLocaleDateString('en-IN', options)}`);
@@ -175,30 +182,49 @@ const ProductDetails = ({ addToCart }) => {
                         </p>
                     </div>
 
-                    {/* Sizes Section - Dynamic from DB */}
-                    {product.sizes && product.sizes.length > 0 && (
+                    {/* Sizes Section - Dynamic from DB (JSONB format) */}
+                    {product.sizes && Object.keys(product.sizes).length > 0 && (
                         <div style={{ marginBottom: '2.5rem' }}>
                             <h4 style={{ marginBottom: '1rem' }}>Select Size</h4>
                             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                                {product.sizes.map(size => (
-                                    <button
-                                        key={size}
-                                        onClick={() => setSelectedSize(size)}
-                                        style={{
-                                            width: '50px',
-                                            height: '50px',
-                                            borderRadius: '4px',
-                                            border: selectedSize === size ? '2px solid var(--primary)' : '1px solid var(--border)',
-                                            backgroundColor: selectedSize === size ? 'var(--bg-alt)' : 'white',
-                                            color: selectedSize === size ? 'var(--primary)' : 'var(--secondary)',
-                                            fontWeight: 'bold',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s'
-                                        }}
-                                    >
-                                        {size}
-                                    </button>
-                                ))}
+                                {Object.keys(product.sizes).map(size => {
+                                    const sizeStock = product.sizes[size];
+                                    const isOutOfStock = sizeStock <= 0;
+
+                                    return (
+                                        <button
+                                            key={size}
+                                            onClick={() => !isOutOfStock && setSelectedSize(size)}
+                                            disabled={isOutOfStock}
+                                            style={{
+                                                width: '50px',
+                                                height: '50px',
+                                                borderRadius: '4px',
+                                                border: selectedSize === size ? '2px solid var(--primary)' : '1px solid var(--border)',
+                                                backgroundColor: isOutOfStock ? '#f3f4f6' : (selectedSize === size ? 'var(--bg-alt)' : 'white'),
+                                                color: isOutOfStock ? '#9ca3af' : (selectedSize === size ? 'var(--primary)' : 'var(--secondary)'),
+                                                fontWeight: 'bold',
+                                                cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                                                transition: 'all 0.2s',
+                                                position: 'relative',
+                                                opacity: isOutOfStock ? 0.6 : 1
+                                            }}
+                                        >
+                                            {size}
+                                            {isOutOfStock && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: '50%',
+                                                    left: '0',
+                                                    width: '100%',
+                                                    height: '1px',
+                                                    backgroundColor: '#9ca3af',
+                                                    transform: 'rotate(-45deg)'
+                                                }}></div>
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
@@ -273,8 +299,12 @@ const ProductDetails = ({ addToCart }) => {
                         </div>
 
                         {estimation && (
-                            <div style={{ marginTop: '1rem', color: 'var(--secondary)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <CheckCircle size={16} color="#166534" />
+                            <div style={{ marginTop: '1rem', color: estimation === 'Pincode does not exist' ? '#991b1b' : 'var(--secondary)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {estimation === 'Pincode does not exist' ? (
+                                    <X size={16} color="#991b1b" />
+                                ) : (
+                                    <CheckCircle size={16} color="#166534" />
+                                )}
                                 <span>{estimation}</span>
                             </div>
                         )}

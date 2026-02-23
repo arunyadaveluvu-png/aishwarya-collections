@@ -225,22 +225,8 @@ const Checkout = ({ cart, setCart }) => {
 
             if (itemsError) throw itemsError;
 
-            // Decrement stock for each ordered item directly
-            for (const item of items) {
-                const { data: currentProduct } = await supabase
-                    .from('products')
-                    .select('stock')
-                    .eq('id', item.product_id)
-                    .single();
-
-                if (currentProduct) {
-                    const newStock = Math.max(0, (currentProduct.stock || 0) - item.quantity);
-                    await supabase
-                        .from('products')
-                        .update({ stock: newStock })
-                        .eq('id', item.product_id);
-                }
-            }
+            // Note: Stock reduction is now handled automatically by a database trigger
+            // on the 'order_items' table for better reliability and size-specific handling.
 
             setCart([]);
             navigate("/order-success");
