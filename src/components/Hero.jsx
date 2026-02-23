@@ -17,7 +17,7 @@ const Hero = () => {
             position: 'relative',
             overflow: 'hidden',
             backgroundColor: '#fdf5e6',
-            background: 'linear-gradient(rgba(0,0,0,0.15), rgba(0,0,0,0.15)), url("https://img.freepik.com/premium-photo/teej-background-copy-space_1036998-360466.jpg?semt=ais_user_personalization&w=1600") center/cover no-repeat'
+            background: 'linear-gradient(rgba(0,0,0,0.15), rgba(0,0,0,0.15)), url("https://www.palamsilk.com/cdn/shop/products/DSC_9089.jpg?v=1668645651") center/cover no-repeat'
         }}>
             <div className="container" style={{ position: 'relative', zIndex: 10 }}>
                 <motion.div

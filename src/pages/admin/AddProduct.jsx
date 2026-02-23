@@ -16,12 +16,13 @@ const AddProduct = () => {
     const [success, setSuccess] = useState(false);
     const [product, setProduct] = useState({
         name: '',
-        category: '', // Starts empty
+        category: '',
         price: '',
         discount_price: '',
         stock: 10,
         image_url: '',
-        description: ''
+        description: '',
+        sizes: []
     });
     const [parentCategory, setParentCategory] = useState(''); // 'Men' or 'Women'
 
@@ -75,7 +76,7 @@ const AddProduct = () => {
                 finalImageUrl = await uploadImage(imageFile);
             }
 
-            // Clean price (remove commas if any)
+            // Clean data
             const cleanProduct = {
                 ...product,
                 image_url: finalImageUrl,
@@ -101,13 +102,6 @@ const AddProduct = () => {
         }
     };
 
-    const categories = [
-        'Sarees',
-        'Dresses',
-        'Men',
-        'Women'
-    ];
-
     if (success) {
         return (
             <div style={{
@@ -122,7 +116,7 @@ const AddProduct = () => {
                     <CheckCircle2 size={80} />
                 </div>
                 <h2 style={{ fontSize: '2rem', color: 'var(--secondary)', marginBottom: '0.5rem' }}>Product Added!</h2>
-                <p style={{ color: 'var(--text-muted)' }}>The new saree has been successfully added to the collection.</p>
+                <p style={{ color: 'var(--text-muted)' }}>The product has been successfully added to the collection.</p>
                 <p style={{ fontSize: '0.8rem', marginTop: '1rem', color: 'var(--text-muted)' }}>Redirecting to inventory...</p>
             </div>
         );
@@ -148,63 +142,114 @@ const AddProduct = () => {
 
             <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem' }}>
                 {/* Left Column: Details */}
-                <div className="glass-morphism" style={{ padding: '2rem', borderRadius: '20px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Product Name</label>
-                            <input
-                                type="text"
-                                name="name"
-                                value={product.name}
-                                onChange={handleChange}
-                                required
-                                placeholder="e.g. Royal Banarasi Silk Saree"
-                                style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
-                            />
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div className="glass-morphism" style={{ padding: '2rem', borderRadius: '20px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             <div>
-                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Parent Category</label>
-                                <select
-                                    value={parentCategory}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        setParentCategory(val);
-                                        if (val === 'Men' || val === 'Cosmetics') {
-                                            setProduct(prev => ({ ...prev, category: val }));
-                                        } else {
-                                            setProduct(prev => ({ ...prev, category: '' }));
-                                        }
-                                    }}
+                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Product Name</label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={product.name}
+                                    onChange={handleChange}
                                     required
-                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'white' }}
-                                >
-                                    <option value="">Select Parent</option>
-                                    <option value="Men">Men</option>
-                                    <option value="Women">Women</option>
-                                    <option value="Cosmetics">Cosmetics</option>
-                                </select>
+                                    placeholder="e.g. Royal Silk Dress"
+                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
+                                />
                             </div>
-                            {parentCategory === 'Women' && (
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Sub-Category</label>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Parent Category</label>
                                     <select
-                                        name="category"
-                                        value={product.category}
-                                        onChange={handleChange}
+                                        value={parentCategory}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setParentCategory(val);
+                                            // Auto-set category if it's top-level
+                                            if (val === 'Men' || val === 'Cosmetics') {
+                                                setProduct(prev => ({ ...prev, category: val, sizes: [] }));
+                                            } else {
+                                                setProduct(prev => ({ ...prev, category: '', sizes: [] }));
+                                            }
+                                        }}
                                         required
                                         style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'white' }}
                                     >
-                                        <option value="">Select Sub</option>
-                                        <option value="Sarees">Sarees</option>
-                                        <option value="Dresses">Dresses</option>
+                                        <option value="">Select Parent</option>
+                                        <option value="Men">Men</option>
+                                        <option value="Women">Women</option>
+                                        <option value="Cosmetics">Cosmetics</option>
                                     </select>
                                 </div>
-                            )}
+                                {parentCategory === 'Women' && (
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Sub-Category</label>
+                                        <select
+                                            name="category"
+                                            value={product.category}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setProduct(prev => ({ ...prev, category: val, sizes: [] }));
+                                            }}
+                                            required
+                                            style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'white' }}
+                                        >
+                                            <option value="">Select Sub</option>
+                                            <option value="Sarees">Sarees</option>
+                                            <option value="Dresses">Dresses</option>
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
                         </div>
+                    </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    {/* Sizes Section - Now structured like the other inputs */}
+                    {(parentCategory === 'Men' || product.category === 'Dresses') && (
+                        <div className="glass-morphism" style={{ padding: '2rem', borderRadius: '20px', backgroundColor: 'rgba(212, 175, 55, 0.05)' }}>
+                            <label style={{ display: 'block', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: '600', color: 'var(--primary)' }}>Select Available Sizes</label>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                {['S', 'M', 'L', 'XL', 'XXL'].map(size => {
+                                    const isSelected = product.sizes.includes(size);
+                                    return (
+                                        <button
+                                            key={size}
+                                            type="button"
+                                            onClick={() => {
+                                                setProduct(prev => {
+                                                    const newSizes = isSelected
+                                                        ? prev.sizes.filter(s => s !== size)
+                                                        : [...prev.sizes, size];
+                                                    return { ...prev, sizes: newSizes };
+                                                });
+                                            }}
+                                            style={{
+                                                padding: '10px 20px',
+                                                borderRadius: '10px',
+                                                border: `2px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
+                                                backgroundColor: isSelected ? 'var(--primary)' : 'white',
+                                                color: isSelected ? 'white' : 'var(--secondary)',
+                                                fontWeight: '700',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                boxShadow: isSelected ? '0 4px 12px rgba(212, 175, 55, 0.2)' : 'none'
+                                            }}
+                                        >
+                                            {size}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '15px' }}>
+                                <ImageIcon size={14} style={{ verticalAlign: 'middle', marginRight: '5px' }} />
+                                Customers can choose from these sizes on the product page.
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="glass-morphism" style={{ padding: '2rem', borderRadius: '20px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Price (₹)</label>
                                 <input
@@ -218,7 +263,7 @@ const AddProduct = () => {
                                 />
                             </div>
                             <div>
-                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Discount Price (₹) <span style={{ fontWeight: '400', fontSize: '0.75rem', color: 'var(--text-muted)' }}>(Optional)</span></label>
+                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Discount Price (₹)</label>
                                 <input
                                     type="number"
                                     name="discount_price"
@@ -228,28 +273,27 @@ const AddProduct = () => {
                                     style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
                                 />
                             </div>
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Stock Quantity</label>
-                                <input
-                                    type="number"
-                                    name="stock"
-                                    value={product.stock}
-                                    onChange={handleChange}
-                                    required
-                                    placeholder="e.g. 10"
-                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
-                                />
-                            </div>
                         </div>
-
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Stock Quantity</label>
+                            <input
+                                type="number"
+                                name="stock"
+                                value={product.stock}
+                                onChange={handleChange}
+                                required
+                                placeholder="e.g. 10"
+                                style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
+                            />
+                        </div>
                         <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Description</label>
                             <textarea
                                 name="description"
                                 value={product.description}
                                 onChange={handleChange}
-                                rows="5"
-                                placeholder="Describe the saree's weave, work, and elegance..."
+                                rows="4"
+                                placeholder="Details about material, design, and care..."
                                 style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)', resize: 'vertical' }}
                             ></textarea>
                         </div>
@@ -282,7 +326,6 @@ const AddProduct = () => {
                                 id="product-image-upload"
                                 type="file"
                                 accept="image/*"
-                                capture="environment"
                                 onChange={handleFileChange}
                                 style={{ display: 'none' }}
                             />
@@ -318,25 +361,21 @@ const AddProduct = () => {
                             ) : (
                                 <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
                                     <ImageIcon size={48} style={{ marginBottom: '10px', opacity: 0.3 }} />
-                                    <p style={{ fontSize: '0.8rem' }}>Click to take photo or upload</p>
-                                    <p style={{ fontSize: '0.7rem', marginTop: '5px' }}>{imageFile ? imageFile.name : ''}</p>
+                                    <p style={{ fontSize: '0.8rem' }}>Upload or take product photo</p>
                                 </div>
                             )}
                         </div>
 
                         <div style={{ marginTop: '1.5rem' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Or Paste Image URL</label>
-                            <div style={{ position: 'relative' }}>
-                                <UploadCloud size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                                <input
-                                    type="text"
-                                    name="image_url"
-                                    value={imageFile ? '' : (product.image_url || '')}
-                                    onChange={handleChange}
-                                    placeholder="Paste image link here..."
-                                    style={{ width: '100%', padding: '0.8rem 0.8rem 0.8rem 2.5rem', borderRadius: '10px', border: '1px solid var(--border)', fontSize: '0.8rem' }}
-                                />
-                            </div>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Or Image URL</label>
+                            <input
+                                type="text"
+                                name="image_url"
+                                value={imageFile ? '' : (product.image_url || '')}
+                                onChange={handleChange}
+                                placeholder="Paste link..."
+                                style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)', fontSize: '0.8rem' }}
+                            />
                         </div>
                     </div>
 
@@ -356,7 +395,7 @@ const AddProduct = () => {
                             style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
                         >
                             {loading ? (
-                                <div className="loading-spinner" style={{ width: '20px', height: '20px', borderWeight: '2px' }}></div>
+                                <div className="loading-spinner" style={{ width: '20px', height: '20px' }}></div>
                             ) : (
                                 <>
                                     <Save size={18} />
@@ -366,8 +405,8 @@ const AddProduct = () => {
                         </button>
                     </div>
                 </div>
-            </form >
-        </div >
+            </form>
+        </div>
     );
 };
 

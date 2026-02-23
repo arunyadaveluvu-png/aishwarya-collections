@@ -175,11 +175,12 @@ const ProductDetails = ({ addToCart }) => {
                         </p>
                     </div>
 
-                    {!['Silk', 'Cotton', 'Designer', 'Wedding'].includes(product.category) && (
+                    {/* Sizes Section - Dynamic from DB */}
+                    {product.sizes && product.sizes.length > 0 && (
                         <div style={{ marginBottom: '2.5rem' }}>
                             <h4 style={{ marginBottom: '1rem' }}>Select Size</h4>
-                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                {['S', 'M', 'XL', 'XXL'].map(size => (
+                            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                                {product.sizes.map(size => (
                                     <button
                                         key={size}
                                         onClick={() => setSelectedSize(size)}
@@ -207,7 +208,7 @@ const ProductDetails = ({ addToCart }) => {
                             className="btn-primary"
                             style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '16px' }}
                             onClick={() => {
-                                if (!['Silk', 'Cotton', 'Designer', 'Wedding'].includes(product.category) && !selectedSize) {
+                                if (product.sizes && product.sizes.length > 0 && !selectedSize) {
                                     alert('Please select a size first!');
                                     return;
                                 }

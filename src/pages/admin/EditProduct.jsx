@@ -24,7 +24,8 @@ const EditProduct = () => {
         discount_price: '',
         stock: 0,
         image_url: '',
-        description: ''
+        description: '',
+        sizes: []
     });
     const [parentCategory, setParentCategory] = useState(''); // 'Men' or 'Women'
 
@@ -45,14 +46,15 @@ const EditProduct = () => {
                     setProduct({
                         ...data,
                         price: data.price.toString(),
-                        discount_price: data.discount_price ? data.discount_price.toString() : ''
+                        discount_price: data.discount_price ? data.discount_price.toString() : '',
+                        sizes: data.sizes || []
                     });
                     // Determine parent category
                     if (data.category === 'Men') {
                         setParentCategory('Men');
                     } else if (data.category === 'Cosmetics') {
                         setParentCategory('Cosmetics');
-                    } else if (['Sarees', 'Dresses', 'Silk', 'Cotton', 'Designer', 'Wedding', 'Kurtis & Suits', 'Lehenga'].includes(data.category)) {
+                    } else if (['Sarees', 'Dresses', 'Silk', 'Cotton', 'Designer', 'Wedding', 'Kurtis & Suits', 'Lehenga', 'Handloom', 'Chiffon', 'Georgette', 'Banarasi', 'Kanjivaram', 'Pattu', 'Ready-to-Wear', 'Party Wear', 'Daily Wear'].includes(data.category)) {
                         setParentCategory('Women');
                     }
                 }
@@ -116,13 +118,16 @@ const EditProduct = () => {
                 finalImageUrl = await uploadImage(imageFile);
             }
 
-            // Clean price and ensure stock is an integer
+            // Clean data
             const cleanProduct = {
-                ...product,
-                image_url: finalImageUrl,
+                name: product.name,
+                category: product.category,
                 price: parseFloat(product.price.toString().replace(/,/g, '')),
                 discount_price: product.discount_price ? parseFloat(product.discount_price.toString().replace(/,/g, '')) : null,
-                stock: parseInt(product.stock, 10) || 0
+                stock: parseInt(product.stock, 10) || 0,
+                image_url: finalImageUrl,
+                description: product.description,
+                sizes: product.sizes
             };
 
             const { error } = await supabase
@@ -142,24 +147,6 @@ const EditProduct = () => {
             setSaving(false);
         }
     };
-
-    const categories = [
-        'Silk',
-        'Cotton',
-        'Designer',
-        'Wedding',
-        'Chiffon',
-        'Georgette',
-        'Banarasi',
-        'Kanjivaram',
-        'Pattu',
-        'Ready-to-Wear',
-        'Party Wear',
-        'Daily Wear',
-        'Handloom',
-        'Lehenga',
-        'Kurtis & Suits'
-    ];
 
     if (loading) {
         return (
@@ -210,69 +197,112 @@ const EditProduct = () => {
 
             <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem' }}>
                 {/* Left Column: Details */}
-                <div className="glass-morphism" style={{ padding: '2rem', borderRadius: '20px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Product Name</label>
-                            <input
-                                type="text"
-                                name="name"
-                                value={product.name}
-                                onChange={handleChange}
-                                required
-                                placeholder="e.g. Royal Banarasi Silk Saree"
-                                style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
-                            />
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div className="glass-morphism" style={{ padding: '2rem', borderRadius: '20px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             <div>
-                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Parent Category</label>
-                                <select
-                                    value={parentCategory}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        setParentCategory(val);
-                                        if (val === 'Men' || val === 'Cosmetics') {
-                                            setProduct(prev => ({ ...prev, category: val }));
-                                        } else {
-                                            setProduct(prev => ({ ...prev, category: '' }));
-                                        }
-                                    }}
+                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Product Name</label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={product.name}
+                                    onChange={handleChange}
                                     required
-                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'white' }}
-                                >
-                                    <option value="">Select Parent</option>
-                                    <option value="Men">Men</option>
-                                    <option value="Women">Women</option>
-                                    <option value="Cosmetics">Cosmetics</option>
-                                </select>
+                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
+                                />
                             </div>
-                            {parentCategory === 'Women' && (
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Sub-Category</label>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Parent Category</label>
                                     <select
-                                        name="category"
-                                        value={product.category}
-                                        onChange={handleChange}
+                                        value={parentCategory}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setParentCategory(val);
+                                            if (val === 'Men' || val === 'Cosmetics') {
+                                                setProduct(prev => ({ ...prev, category: val, sizes: [] }));
+                                            } else {
+                                                setProduct(prev => ({ ...prev, category: '', sizes: [] }));
+                                            }
+                                        }}
                                         required
                                         style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'white' }}
                                     >
-                                        <option value="">Select Sub</option>
-                                        <option value="Sarees">Sarees</option>
-                                        <option value="Dresses">Dresses</option>
-                                        <option value="Silk">Silk</option>
-                                        <option value="Cotton">Cotton</option>
-                                        <option value="Designer">Designer</option>
-                                        <option value="Wedding">Wedding</option>
-                                        <option value="Kurtis & Suits">Kurtis & Suits</option>
-                                        <option value="Lehenga">Lehenga</option>
+                                        <option value="">Select Parent</option>
+                                        <option value="Men">Men</option>
+                                        <option value="Women">Women</option>
+                                        <option value="Cosmetics">Cosmetics</option>
                                     </select>
                                 </div>
-                            )}
+                                {parentCategory === 'Women' && (
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Sub-Category</label>
+                                        <select
+                                            name="category"
+                                            value={product.category}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setProduct(prev => ({ ...prev, category: val, sizes: [] }));
+                                            }}
+                                            required
+                                            style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'white' }}
+                                        >
+                                            <option value="">Select Sub</option>
+                                            <option value="Sarees">Sarees</option>
+                                            <option value="Dresses">Dresses</option>
+                                            <option value="Silk">Silk</option>
+                                            <option value="Cotton">Cotton</option>
+                                            <option value="Designer">Designer</option>
+                                            <option value="Wedding">Wedding</option>
+                                            <option value="Lehenga">Lehenga</option>
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
                         </div>
+                    </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    {/* Sizes Section */}
+                    {(parentCategory === 'Men' || product.category === 'Dresses') && (
+                        <div className="glass-morphism" style={{ padding: '2rem', borderRadius: '20px', backgroundColor: 'rgba(212, 175, 55, 0.05)' }}>
+                            <label style={{ display: 'block', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: '600', color: 'var(--primary)' }}>Select Available Sizes</label>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                {['S', 'M', 'L', 'XL', 'XXL'].map(size => {
+                                    const isSelected = product.sizes.includes(size);
+                                    return (
+                                        <button
+                                            key={size}
+                                            type="button"
+                                            onClick={() => {
+                                                setProduct(prev => {
+                                                    const newSizes = isSelected
+                                                        ? prev.sizes.filter(s => s !== size)
+                                                        : [...prev.sizes, size];
+                                                    return { ...prev, sizes: newSizes };
+                                                });
+                                            }}
+                                            style={{
+                                                padding: '10px 20px',
+                                                borderRadius: '10px',
+                                                border: `2px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
+                                                backgroundColor: isSelected ? 'var(--primary)' : 'white',
+                                                color: isSelected ? 'white' : 'var(--secondary)',
+                                                fontWeight: '700',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            {size}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="glass-morphism" style={{ padding: '2rem', borderRadius: '20px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Price (₹)</label>
                                 <input
@@ -281,24 +311,21 @@ const EditProduct = () => {
                                     value={product.price}
                                     onChange={handleChange}
                                     required
-                                    placeholder="2499"
                                     style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
                                 />
                             </div>
                             <div>
-                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Discount Price (₹) <span style={{ fontWeight: '400', fontSize: '0.75rem', color: 'var(--text-muted)' }}>(Optional)</span></label>
+                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Discount Price (₹)</label>
                                 <input
                                     type="number"
                                     name="discount_price"
                                     value={product.discount_price}
                                     onChange={handleChange}
-                                    placeholder="1999"
                                     style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
                                 />
                             </div>
                         </div>
-
-                        <div>
+                        <div style={{ marginBottom: '1.5rem' }}>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Stock Quantity</label>
                             <input
                                 type="number"
@@ -306,20 +333,16 @@ const EditProduct = () => {
                                 value={product.stock}
                                 onChange={handleChange}
                                 required
-                                placeholder="e.g. 10"
                                 style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
                             />
                         </div>
-
-
                         <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Description</label>
                             <textarea
                                 name="description"
                                 value={product.description || ''}
                                 onChange={handleChange}
-                                rows="5"
-                                placeholder="Describe the saree's weave, work, and elegance..."
+                                rows="4"
                                 style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)', resize: 'vertical' }}
                             ></textarea>
                         </div>
@@ -352,7 +375,6 @@ const EditProduct = () => {
                                 id="product-image-edit"
                                 type="file"
                                 accept="image/*"
-                                capture="environment"
                                 onChange={handleFileChange}
                                 style={{ display: 'none' }}
                             />
@@ -388,25 +410,21 @@ const EditProduct = () => {
                             ) : (
                                 <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
                                     <ImageIcon size={48} style={{ marginBottom: '10px', opacity: 0.3 }} />
-                                    <p style={{ fontSize: '0.8rem' }}>Click to take photo or upload</p>
-                                    <p style={{ fontSize: '0.7rem', marginTop: '5px' }}>{imageFile ? imageFile.name : ''}</p>
+                                    <p style={{ fontSize: '0.8rem' }}>Click to upload new image</p>
                                 </div>
                             )}
                         </div>
 
                         <div style={{ marginTop: '1.5rem' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Or Paste Image URL</label>
-                            <div style={{ position: 'relative' }}>
-                                <UploadCloud size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                                <input
-                                    type="text"
-                                    name="image_url"
-                                    value={imageFile ? '' : (product.image_url || '')}
-                                    onChange={handleChange}
-                                    placeholder="Paste image link here..."
-                                    style={{ width: '100%', padding: '0.8rem 0.8rem 0.8rem 2.5rem', borderRadius: '10px', border: '1px solid var(--border)', fontSize: '0.8rem' }}
-                                />
-                            </div>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Or Image URL</label>
+                            <input
+                                type="text"
+                                name="image_url"
+                                value={imageFile ? '' : (product.image_url || '')}
+                                onChange={handleChange}
+                                placeholder="Paste link..."
+                                style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)', fontSize: '0.8rem' }}
+                            />
                         </div>
                     </div>
 
