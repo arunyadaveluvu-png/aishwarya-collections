@@ -21,12 +21,8 @@ const Login = () => {
             setLoading(true);
             const { user } = await login(email, password);
 
-            // Role-based redirect logic
-            if (user?.user_metadata?.role === 'admin') {
-                navigate('/admin');
-            } else {
-                navigate('/checkout');
-            }
+            // Always redirect to checkout/home for everyone through this door
+            navigate('/checkout');
         } catch (err) {
             setError(err.message || 'Failed to login. Please check your credentials.');
         } finally {
