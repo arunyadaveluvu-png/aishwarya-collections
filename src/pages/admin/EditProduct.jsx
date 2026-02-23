@@ -257,6 +257,9 @@ const EditProduct = () => {
                                             <option value="">Select Sub</option>
                                             <option value="Sarees">Sarees</option>
                                             <option value="Dresses">Dresses</option>
+                                            <option value="Kurtis & Suits">Kurtis & Suits</option>
+                                            <option value="Lehenga">Lehenga</option>
+                                            <option value="Wedding Collection">Wedding Collection</option>
                                             <option value="Silk">Silk</option>
                                             <option value="Cotton">Cotton</option>
                                             <option value="Designer">Designer</option>
@@ -269,8 +272,8 @@ const EditProduct = () => {
                         </div>
                     </div>
 
-                    {/* Sizes Section - Available for Men and Women fashion categories */}
-                    {(parentCategory === 'Men' || parentCategory === 'Women') && (
+                    {/* Sizes Section - Available for Fashion (Men and non-Saree Women categories) */}
+                    {(parentCategory === 'Men' || (parentCategory === 'Women' && product.category !== 'Sarees')) && (
                         <div className="glass-morphism" style={{ padding: '2rem', borderRadius: '20px', backgroundColor: 'rgba(212, 175, 55, 0.05)' }}>
                             <label style={{ display: 'block', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: '600', color: 'var(--primary)' }}>Available Sizes & Quantities</label>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
