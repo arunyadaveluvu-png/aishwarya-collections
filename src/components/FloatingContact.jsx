@@ -26,7 +26,7 @@ const FloatingContact = () => {
         {
             icon: <Instagram size={20} />,
             label: 'Instagram',
-            href: 'https://www.instagram.com/aiswaryacollections_2/',
+            href: 'https://www.instagram.com/aishwaryacollections_2?igsh=MXZvY29mdG50amZlaw==',
             color: '#E4405F'
         },
         {
@@ -38,7 +38,7 @@ const FloatingContact = () => {
         {
             icon: <Phone size={20} />,
             label: 'Phone',
-            href: 'tel:+919876543210',
+            href: 'tel:+919704033690',
             color: '#34A853'
         }
     ];
