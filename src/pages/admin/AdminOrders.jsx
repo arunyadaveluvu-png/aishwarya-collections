@@ -346,7 +346,7 @@ const AdminOrders = () => {
 
                                     <div style={{ marginTop: '30px', borderTop: '1px solid black', paddingTop: '15px', textAlign: 'center', fontSize: '10pt', color: 'black' }}>
                                         Thank you for shopping with Aishwarya Collections!<br />
-                                        www.veloura.com
+                                        aishwarya-collections.vercel.app
                                     </div>
                                 </div>
 
