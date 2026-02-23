@@ -20,13 +20,13 @@ const FloatingContact = () => {
         {
             icon: <Mail size={20} />,
             label: 'Email',
-            href: 'mailto:contactprofixer.com@gmail.com',
+            href: 'mailto:aishwaryacollections@gmail.com',
             color: '#EA4335'
         },
         {
             icon: <Instagram size={20} />,
             label: 'Instagram',
-            href: 'https://www.instagram.com/aishwaryacollections_2/',
+            href: 'https://www.instagram.com/aiswaryacollections_2/',
             color: '#E4405F'
         },
         {
