@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { ShoppingCart, Heart, ArrowLeft } from 'lucide-react';
+import { ShoppingCart, Heart, ArrowLeft, Truck, CheckCircle } from 'lucide-react';
 import { useWishlist } from '../context/WishlistContext';
 
 const ProductDetails = ({ addToCart }) => {
@@ -12,6 +12,35 @@ const ProductDetails = ({ addToCart }) => {
     const { isInWishlist, toggleWishlist } = useWishlist();
     const isFavorited = id ? isInWishlist(id) : false;
     const [selectedSize, setSelectedSize] = useState(null);
+    const [pincode, setPincode] = useState('');
+    const [estimation, setEstimation] = useState(null);
+
+    const handleCheckDelivery = () => {
+        if (pincode.length !== 6) {
+            alert('Please enter a valid 6-digit pincode');
+            return;
+        }
+
+        const date = new Date();
+        const options = { month: 'short', day: 'numeric' };
+
+        if (pincode === '515701') {
+            // Local: 2-3 days
+            const minDate = new Date(); minDate.setDate(date.getDate() + 2);
+            const maxDate = new Date(); maxDate.setDate(date.getDate() + 3);
+            setEstimation(`Estimated delivery by ${minDate.toLocaleDateString('en-IN', options)} - ${maxDate.toLocaleDateString('en-IN', options)}`);
+        } else if (['51', '52', '53', '56', '57', '58', '59', '60', '61', '62', '63', '64'].some(p => pincode.startsWith(p))) {
+            // South India (simplified check for 51-53, 56-64 prefixes)
+            const minDate = new Date(); minDate.setDate(date.getDate() + 4);
+            const maxDate = new Date(); maxDate.setDate(date.getDate() + 6);
+            setEstimation(`Estimated delivery by ${minDate.toLocaleDateString('en-IN', options)} - ${maxDate.toLocaleDateString('en-IN', options)}`);
+        } else {
+            // Rest of India: 8-10 days
+            const minDate = new Date(); minDate.setDate(date.getDate() + 8);
+            const maxDate = new Date(); maxDate.setDate(date.getDate() + 10);
+            setEstimation(`Estimated delivery by ${minDate.toLocaleDateString('en-IN', options)} - ${maxDate.toLocaleDateString('en-IN', options)}`);
+        }
+    };
 
     const fetchProduct = useCallback(async () => {
         try {
@@ -210,6 +239,49 @@ const ProductDetails = ({ addToCart }) => {
                                 color={isFavorited ? "var(--accent)" : "var(--secondary)"}
                             />
                         </button>
+                    </div>
+
+                    {/* Delivery Estimation Section */}
+                    <div style={{ marginTop: '2.5rem', padding: '1.5rem', backgroundColor: 'white', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                        <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Truck size={18} color="var(--primary)" /> Check Delivery Estimates
+                        </h4>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <input
+                                type="text"
+                                placeholder="Enter Pincode"
+                                maxLength={6}
+                                value={pincode}
+                                onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                                style={{
+                                    flex: 1,
+                                    padding: '10px 15px',
+                                    borderRadius: '6px',
+                                    border: '1px solid var(--border)',
+                                    fontSize: '0.9rem',
+                                    outline: 'none'
+                                }}
+                            />
+                            <button
+                                onClick={handleCheckDelivery}
+                                className="btn-outline"
+                                style={{ padding: '10px 20px', fontSize: '0.85rem' }}
+                            >
+                                Check
+                            </button>
+                        </div>
+
+                        {estimation && (
+                            <div style={{ marginTop: '1rem', color: 'var(--secondary)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <CheckCircle size={16} color="#166534" />
+                                <span>{estimation}</span>
+                            </div>
+                        )}
+                        {!estimation && (
+                            <p style={{ marginTop: '0.8rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                Enter pincode to see actual delivery date for your location.
+                            </p>
+                        )}
                     </div>
 
                     <div style={{ marginTop: '3rem', borderTop: '1px solid var(--border)', paddingTop: '2rem' }}>
