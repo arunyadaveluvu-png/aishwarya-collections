@@ -63,6 +63,23 @@ const ProductCard = ({ product, addToCart }) => {
                             borderRadius: '2px'
                         }}>New</span>
                     )}
+                    {product.discount_price && (
+                        <span style={{
+                            position: 'absolute',
+                            top: product.isNew ? '40px' : '10px',
+                            left: '10px',
+                            backgroundColor: '#ef4444',
+                            color: 'white',
+                            padding: '4px 8px',
+                            fontSize: '0.7rem',
+                            fontWeight: 'bold',
+                            textTransform: 'uppercase',
+                            borderRadius: '2px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        }}>
+                            Save ₹{Math.round(parseFloat(product.price.toString().replace(/,/g, '')) - parseFloat(product.discount_price.toString().replace(/,/g, '')))}
+                        </span>
+                    )}
                 </div>
             </Link>
 
@@ -100,7 +117,16 @@ const ProductCard = ({ product, addToCart }) => {
                 <Link to={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>{product.category}</span>
                     <h3 style={{ fontSize: '1.1rem', margin: '0.5rem 0', color: 'var(--secondary)' }}>{product.name}</h3>
-                    <p style={{ fontWeight: 'bold', color: 'var(--primary-dark)', fontSize: '1.2rem' }}>₹{product.price}</p>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                        {product.discount_price ? (
+                            <>
+                                <p style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '1.2rem', margin: 0 }}>₹{product.discount_price}</p>
+                                <p style={{ color: 'var(--text-muted)', textDecoration: 'line-through', fontSize: '0.9rem', margin: 0 }}>₹{product.price}</p>
+                            </>
+                        ) : (
+                            <p style={{ fontWeight: 'bold', color: 'var(--primary-dark)', fontSize: '1.2rem', margin: 0 }}>₹{product.price}</p>
+                        )}
+                    </div>
                     {/* Stock badge */}
                     {(() => {
                         const stock = product.stock ?? product.quantity ?? null;

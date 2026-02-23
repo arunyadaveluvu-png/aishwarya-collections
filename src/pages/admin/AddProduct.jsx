@@ -18,6 +18,7 @@ const AddProduct = () => {
         name: '',
         category: '', // Starts empty
         price: '',
+        discount_price: '',
         stock: 10,
         image_url: '',
         description: ''
@@ -78,7 +79,9 @@ const AddProduct = () => {
             const cleanProduct = {
                 ...product,
                 image_url: finalImageUrl,
-                price: parseFloat(product.price.toString().replace(/,/g, ''))
+                price: parseFloat(product.price.toString().replace(/,/g, '')),
+                discount_price: product.discount_price ? parseFloat(product.discount_price.toString().replace(/,/g, '')) : null,
+                stock: parseInt(product.stock, 10) || 0
             };
 
             const { error } = await supabase
@@ -210,6 +213,17 @@ const AddProduct = () => {
                                     onChange={handleChange}
                                     required
                                     placeholder="2499"
+                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Discount Price (₹) <span style={{ fontWeight: '400', fontSize: '0.75rem', color: 'var(--text-muted)' }}>(Optional)</span></label>
+                                <input
+                                    type="number"
+                                    name="discount_price"
+                                    value={product.discount_price}
+                                    onChange={handleChange}
+                                    placeholder="1999"
                                     style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
                                 />
                             </div>

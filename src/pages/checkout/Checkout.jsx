@@ -540,7 +540,7 @@ const Checkout = ({ cart, setCart }) => {
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                                 <span>Shipping</span>
-                                <span style={{ color: '#059669' }}>Calculated at next step</span>
+                                <span style={{ color: '#059669', fontWeight: '600' }}>Free Delivery</span>
                             </div>
                             <hr style={{ margin: '0.5rem 0', border: '0', borderTop: '1px solid var(--border)' }} />
                             <div style={{

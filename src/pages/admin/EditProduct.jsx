@@ -21,6 +21,7 @@ const EditProduct = () => {
         name: '',
         category: '',
         price: '',
+        discount_price: '',
         stock: 0,
         image_url: '',
         description: ''
@@ -43,7 +44,8 @@ const EditProduct = () => {
                 if (data) {
                     setProduct({
                         ...data,
-                        price: data.price.toString()
+                        price: data.price.toString(),
+                        discount_price: data.discount_price ? data.discount_price.toString() : ''
                     });
                     // Determine parent category
                     if (data.category === 'Men') {
@@ -117,6 +119,7 @@ const EditProduct = () => {
                 ...product,
                 image_url: finalImageUrl,
                 price: parseFloat(product.price.toString().replace(/,/g, '')),
+                discount_price: product.discount_price ? parseFloat(product.discount_price.toString().replace(/,/g, '')) : null,
                 stock: parseInt(product.stock, 10) || 0
             };
 
@@ -280,17 +283,29 @@ const EditProduct = () => {
                                 />
                             </div>
                             <div>
-                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Stock Quantity</label>
+                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Discount Price (₹) <span style={{ fontWeight: '400', fontSize: '0.75rem', color: 'var(--text-muted)' }}>(Optional)</span></label>
                                 <input
                                     type="number"
-                                    name="stock"
-                                    value={product.stock}
+                                    name="discount_price"
+                                    value={product.discount_price}
                                     onChange={handleChange}
-                                    required
-                                    placeholder="e.g. 10"
+                                    placeholder="1999"
                                     style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
                                 />
                             </div>
+                        </div>
+
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Stock Quantity</label>
+                            <input
+                                type="number"
+                                name="stock"
+                                value={product.stock}
+                                onChange={handleChange}
+                                required
+                                placeholder="e.g. 10"
+                                style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
+                            />
                         </div>
 
 
