@@ -50,6 +50,8 @@ const EditProduct = () => {
                     // Determine parent category
                     if (data.category === 'Men') {
                         setParentCategory('Men');
+                    } else if (data.category === 'Cosmetics') {
+                        setParentCategory('Cosmetics');
                     } else if (['Sarees', 'Dresses', 'Silk', 'Cotton', 'Designer', 'Wedding', 'Kurtis & Suits', 'Lehenga'].includes(data.category)) {
                         setParentCategory('Women');
                     }
@@ -231,8 +233,8 @@ const EditProduct = () => {
                                     onChange={(e) => {
                                         const val = e.target.value;
                                         setParentCategory(val);
-                                        if (val === 'Men') {
-                                            setProduct(prev => ({ ...prev, category: 'Men' }));
+                                        if (val === 'Men' || val === 'Cosmetics') {
+                                            setProduct(prev => ({ ...prev, category: val }));
                                         } else {
                                             setProduct(prev => ({ ...prev, category: '' }));
                                         }
@@ -243,6 +245,7 @@ const EditProduct = () => {
                                     <option value="">Select Parent</option>
                                     <option value="Men">Men</option>
                                     <option value="Women">Women</option>
+                                    <option value="Cosmetics">Cosmetics</option>
                                 </select>
                             </div>
                             {parentCategory === 'Women' && (
