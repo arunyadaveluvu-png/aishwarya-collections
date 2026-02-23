@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabase';
 import {
     ShoppingBag,
@@ -12,8 +12,12 @@ import {
     Calendar,
     ChevronDown,
     ChevronUp,
-    Printer
+    Printer,
+    Download,
+    FileText
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const AdminOrders = () => {
     const [orders, setOrders] = useState([]);
@@ -21,20 +25,22 @@ const AdminOrders = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('All');
     const [expandedOrder, setExpandedOrder] = useState(null);
-    const [pendingStatus, setPendingStatus] = useState({}); // { orderId: newStatus }
+    const [pendingStatus, setPendingStatus] = useState({});
     const [updatingId, setUpdatingId] = useState(null);
     const [selectedOrders, setSelectedOrders] = useState([]);
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    // Refs for individual printable slips
+    const slipRefs = useRef({});
 
     useEffect(() => {
         fetchOrders();
-
         const subscription = supabase
             .channel('orders_realtime')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
                 fetchOrders();
             })
             .subscribe();
-
         return () => {
             supabase.removeChannel(subscription);
         };
@@ -47,7 +53,6 @@ const AdminOrders = () => {
                 .from('orders')
                 .select('*, order_items(*, products(*))')
                 .order('created_at', { ascending: false });
-
             if (error) throw error;
             setOrders(data || []);
         } catch (error) {
@@ -76,59 +81,76 @@ const AdminOrders = () => {
         }
     };
 
-    const handlePrintSlips = (singleOrder = null) => {
+    const handleDownloadPDF = async (singleOrder = null) => {
         const orderIdsToPrint = singleOrder ? [singleOrder.id] : selectedOrders;
         if (orderIdsToPrint.length === 0) return;
 
-        // Custom print triggering
-        const printStyles = document.createElement('style');
-        printStyles.id = 'print-dispatch-styles';
-        printStyles.innerHTML = `
-            @media print {
-                body * { visibility: hidden; }
-                .dispatch-slip-printable, .dispatch-slip-printable * { visibility: visible; }
-                .dispatch-slip-printable { 
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    width: 100%;
-                    display: block !important;
-                }
-                .no-print { display: none !important; }
+        try {
+            setIsDownloading(true);
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+
+            for (let i = 0; i < orderIdsToPrint.length; i++) {
+                const orderId = orderIdsToPrint[i];
+                const element = slipRefs.current[orderId];
+
+                if (!element) continue;
+
+                // Temporarily show the element for capturing
+                element.style.display = 'block';
+                element.style.position = 'fixed';
+                element.style.top = '-9999px';
+                element.style.left = '0';
+                element.style.width = '180mm'; // Set a fixed width for the capture
+
+                const canvas = await html2canvas(element, {
+                    scale: 2, // Higher quality
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff'
+                });
+
+                // Re-hide the element
+                element.style.display = 'none';
+
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 180; // mm
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                if (i > 0) pdf.addPage();
+
+                // Center the image on the A4 page
+                const xOffset = (pageWidth - imgWidth) / 2;
+                const yOffset = 20;
+
+                pdf.addImage(imgData, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
             }
-        `;
-        document.head.appendChild(printStyles);
 
-        window.print();
-
-        setTimeout(() => {
-            const styleElement = document.getElementById('print-dispatch-styles');
-            if (styleElement) styleElement.remove();
-        }, 500);
+            pdf.save(`dispatch_slips_${Date.now()}.pdf`);
+            alert('PDF downloaded successfully!');
+        } catch (error) {
+            console.error('PDF Generation Error:', error);
+            alert('Failed to generate PDF. Please try again.');
+        } finally {
+            setIsDownloading(false);
+        }
     };
 
     const updateOrderStatus = async (orderId) => {
         const newStatus = pendingStatus[orderId];
         if (!newStatus) return;
-
         try {
             setUpdatingId(orderId);
-            const { data, error } = await supabase
+            const { error } = await supabase
                 .from('orders')
                 .update({ status: newStatus })
-                .eq('id', orderId)
-                .select();
-
+                .eq('id', orderId);
             if (error) throw error;
-
-            setOrders(orders.map(order =>
-                order.id === orderId ? { ...order, status: newStatus } : order
-            ));
-
+            setOrders(orders.map(order => order.id === orderId ? { ...order, status: newStatus } : order));
             const newPending = { ...pendingStatus };
             delete newPending[orderId];
             setPendingStatus(newPending);
-
             alert(`Order status updated to ${newStatus}`);
         } catch (error) {
             alert('Error updating status: ' + error.message);
@@ -173,15 +195,16 @@ const AdminOrders = () => {
 
     return (
         <div className="admin-orders-page">
-            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
                     <h1 style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--secondary)' }}>Order Management</h1>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Track and update customer order statuses.</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Track and and download dispatch slips.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
                     {selectedOrders.length > 0 && (
                         <button
-                            onClick={() => handlePrintSlips()}
+                            onClick={() => handleDownloadPDF()}
+                            disabled={isDownloading}
                             className="btn-primary"
                             style={{
                                 padding: '0.5rem 1.2rem',
@@ -189,10 +212,15 @@ const AdminOrders = () => {
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '8px',
-                                background: '#2d3748'
+                                background: '#1a365d',
+                                cursor: isDownloading ? 'not-allowed' : 'pointer'
                             }}
                         >
-                            <Printer size={16} /> Print {selectedOrders.length} Slips
+                            {isDownloading ? (
+                                <><div className="loading-spinner" style={{ width: '14px', height: '14px', borderTopColor: 'white' }}></div> Generating...</>
+                            ) : (
+                                <><Download size={16} /> Download {selectedOrders.length} Slips (PDF)</>
+                            )}
                         </button>
                     )}
                     <button
@@ -207,7 +235,7 @@ const AdminOrders = () => {
             </div>
 
             {/* Filters */}
-            <div className="glass-morphism no-print" style={{
+            <div className="glass-morphism" style={{
                 padding: '1.5rem',
                 borderRadius: '16px',
                 marginBottom: '2rem',
@@ -278,52 +306,56 @@ const AdminOrders = () => {
 
                         return (
                             <React.Fragment key={order.id}>
-                                {/* Printable Slip (Hidden on screen) */}
-                                {(isSelected || (expandedOrder === order.id && isPrintable)) && (
-                                    <div className="dispatch-slip-printable" style={{ display: 'none' }}>
-                                        <div style={{ padding: '40px', border: '1px solid #000', margin: '20px', backgroundColor: 'white' }}>
-                                            <div style={{ textAlign: 'center', borderBottom: '2px solid black', paddingBottom: '15px', marginBottom: '20px' }}>
-                                                <h1 style={{ margin: 0, fontSize: '24px', letterSpacing: '2px' }}>AISHWARYA COLLECTIONS</h1>
-                                                <p style={{ margin: '5px 0', fontSize: '12px' }}>DISPATCH SLIP</p>
-                                            </div>
-                                            <div style={{ marginBottom: '25px' }}>
-                                                <h3 style={{ fontSize: '14px', textTransform: 'uppercase', marginBottom: '10px', borderBottom: '1px solid #ddd' }}>Ship To:</h3>
-                                                <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{order.first_name} {order.last_name}</div>
-                                                <div style={{ fontSize: '16px', lineHeight: '1.4', marginTop: '5px' }}>
-                                                    {order.address}<br />
-                                                    {order.city} - {order.pincode}
-                                                </div>
-                                            </div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', fontSize: '14px' }}>
-                                                <div>
-                                                    <div style={{ color: '#666', fontSize: '10px', textTransform: 'uppercase' }}>Order ID</div>
-                                                    <div style={{ fontWeight: 'bold' }}>#{order.id.slice(0, 12).toUpperCase()}</div>
-                                                </div>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    <div style={{ color: '#666', fontSize: '10px', textTransform: 'uppercase' }}>Date</div>
-                                                    <div style={{ fontWeight: 'bold' }}>{new Date(order.created_at).toLocaleDateString()}</div>
-                                                </div>
-                                                <div>
-                                                    <div style={{ color: '#666', fontSize: '10px', textTransform: 'uppercase' }}>Payment Mode</div>
-                                                    <div style={{ fontWeight: 'bold' }}>{order.payment_method?.toUpperCase()}</div>
-                                                </div>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    <div style={{ color: '#666', fontSize: '10px', textTransform: 'uppercase' }}>Total Amount</div>
-                                                    <div style={{ fontWeight: 'bold', fontSize: '18px' }}>₹{order.total}</div>
-                                                </div>
-                                            </div>
-                                            <div style={{ marginTop: '40px', borderTop: '1px solid #000', paddingTop: '15px', textAlign: 'center', fontSize: '10px' }}>
-                                                Professional Dispatch System - Aishwarya Collections
-                                            </div>
+                                {/* Hidden Printable Template for Capturing */}
+                                <div
+                                    ref={el => slipRefs.current[order.id] = el}
+                                    style={{ display: 'none', backgroundColor: 'white', padding: '15mm', width: '180mm', fontFamily: 'serif' }}
+                                >
+                                    <div style={{ textAlign: 'center', borderBottom: '2px solid black', paddingBottom: '10px', marginBottom: '15px' }}>
+                                        <h1 style={{ margin: 0, fontSize: '24pt', letterSpacing: '2px', color: 'black' }}>AISHWARYA COLLECTIONS</h1>
+                                        <p style={{ margin: '5px 0', fontSize: '10pt', color: '#333' }}>Premium Hand-woven Sarees • DISPATCH SLIP</p>
+                                    </div>
+
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <h3 style={{ fontSize: '12pt', textTransform: 'uppercase', marginBottom: '10px', borderBottom: '1px solid #ddd', color: 'black' }}>Ship To:</h3>
+                                        <div style={{ fontSize: '18pt', fontWeight: 'bold', color: 'black' }}>{order.first_name} {order.last_name}</div>
+                                        <div style={{ fontSize: '14pt', lineHeight: '1.4', marginTop: '5px', color: 'black' }}>
+                                            {order.address}<br />
+                                            {order.city} - {order.pincode}
                                         </div>
                                     </div>
-                                )}
 
-                                {/* On-Screen List Item */}
-                                <div className="glass-morphism no-print" style={{
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', fontSize: '12pt', color: 'black' }}>
+                                        <div>
+                                            <div style={{ color: '#666', fontSize: '9pt', textTransform: 'uppercase' }}>Order ID</div>
+                                            <div style={{ fontWeight: 'bold' }}>#{order.id.slice(0, 12).toUpperCase()}</div>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ color: '#666', fontSize: '9pt', textTransform: 'uppercase' }}>Date</div>
+                                            <div style={{ fontWeight: 'bold' }}>{new Date(order.created_at).toLocaleDateString()}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{ color: '#666', fontSize: '9pt', textTransform: 'uppercase' }}>Payment Mode</div>
+                                            <div style={{ fontWeight: 'bold' }}>{order.payment_method?.toUpperCase()}</div>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ color: '#666', fontSize: '9pt', textTransform: 'uppercase' }}>Total Amount</div>
+                                            <div style={{ fontWeight: 'bold', fontSize: '16pt' }}>₹{order.total}</div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ marginTop: '30px', borderTop: '1px solid black', paddingTop: '15px', textAlign: 'center', fontSize: '10pt', color: 'black' }}>
+                                        Thank you for shopping with Aishwarya Collections!<br />
+                                        www.veloura.com
+                                    </div>
+                                </div>
+
+                                {/* On-Screen Card */}
+                                <div className={`glass-morphism ${isPrintable ? '' : 'delivered-order'}`} style={{
                                     borderRadius: '16px',
                                     border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border)',
-                                    overflow: 'hidden'
+                                    overflow: 'hidden',
+                                    opacity: isPrintable ? 1 : 0.7
                                 }}>
                                     <div style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                         <input
@@ -365,11 +397,11 @@ const AdminOrders = () => {
                                                         <h4 style={{ fontSize: '0.9rem', color: 'var(--primary)', margin: 0 }}><Truck size={16} style={{ verticalAlign: 'middle', marginRight: '5px' }} /> DISPATCH SLIP</h4>
                                                         {isPrintable && (
                                                             <button
-                                                                onClick={(e) => { e.stopPropagation(); handlePrintSlips(order); }}
+                                                                onClick={(e) => { e.stopPropagation(); handleDownloadPDF(order); }}
                                                                 className="btn-outline"
                                                                 style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '5px' }}
                                                             >
-                                                                <Printer size={14} /> Print Slip
+                                                                <FileText size={14} /> Download PDF
                                                             </button>
                                                         )}
                                                     </div>
@@ -392,6 +424,7 @@ const AdminOrders = () => {
                                                         <select
                                                             value={pendingStatus[order.id] || order.status || 'Pending'}
                                                             onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                                                            className="glass-input"
                                                             style={{ padding: '8px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.85rem' }}
                                                         >
                                                             {['Pending', 'Preparing', 'Shipped', 'Delivered', 'Cancelled'].map(opt => (
@@ -399,7 +432,14 @@ const AdminOrders = () => {
                                                             ))}
                                                         </select>
                                                         {pendingStatus[order.id] && pendingStatus[order.id] !== order.status && (
-                                                            <button onClick={() => updateOrderStatus(order.id)} className="btn-primary" style={{ padding: '8px 15px', fontSize: '0.8rem' }}>Confirm</button>
+                                                            <button
+                                                                onClick={() => updateOrderStatus(order.id)}
+                                                                disabled={updatingId === order.id}
+                                                                className="btn-primary"
+                                                                style={{ padding: '8px 15px', fontSize: '0.8rem' }}
+                                                            >
+                                                                {updatingId === order.id ? '...' : 'Confirm'}
+                                                            </button>
                                                         )}
                                                     </div>
                                                 </div>
@@ -443,18 +483,6 @@ const AdminOrders = () => {
                     </div>
                 )}
             </div>
-
-            <style>{`
-                @media print {
-                    .admin-orders-page > *:not(.dispatch-slip-printable) {
-                        display: none !important;
-                    }
-                    .dispatch-slip-printable {
-                        display: block !important;
-                        page-break-after: always;
-                    }
-                }
-            `}</style>
         </div>
     );
 };
