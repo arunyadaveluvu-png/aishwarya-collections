@@ -98,8 +98,18 @@ const Home = ({ addToCart }) => {
                 <div
                     key={cat.id}
                     onClick={() => {
-                        setSearchParams({ category: cat.name });
-                        document.getElementById('explore-section')?.scrollIntoView({ behavior: 'smooth' });
+                        if (cat.name === 'Contact Us') {
+                            // Find the Customer Care toggle button and click it, then scroll to footer
+                            const footer = document.querySelector('footer');
+                            if (footer) footer.scrollIntoView({ behavior: 'smooth' });
+
+                            // Also trigger the floating contact menu if it exists
+                            const contactBtn = document.querySelector('button[title="Customer Care"]');
+                            if (contactBtn) contactBtn.click();
+                        } else {
+                            setSearchParams({ category: cat.name });
+                            document.getElementById('explore-section')?.scrollIntoView({ behavior: 'smooth' });
+                        }
                     }}
                     style={{ textAlign: 'center', cursor: 'pointer' }}
                 >
@@ -128,14 +138,17 @@ const Home = ({ addToCart }) => {
     const staticCategories = [
         { id: 'men', name: 'Men', image_url: 'https://cityvibes.in/cdn/shop/files/CITYVIBESF14442.jpg?v=1762339076&width=2638' },
         { id: 'women', name: 'Women', image_url: 'https://images.unsplash.com/photo-1532453288672-3a27e9be9efd?fm=jpg&q=60&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8d29tZW4lMjBjbG90aGluZ3xlbnwwfHwwfHx8MA%3D%3D' },
-        { id: 'sarees', name: 'Sarees', image_url: 'https://mykaladhar.com/cdn/shop/articles/Kaladhar___October_Blog_Image.jpg?v=1698919472' },
-        { id: 'dresses', name: 'Dresses', image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGmODoC975mc0ZmYnfbqj1r82ZSNECmKKz5w&s' }
+        { id: 'cosmetics', name: 'Cosmetics', image_url: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=2087&auto=format&fit=crop' },
+        { id: 'contact', name: 'Contact Us', image_url: 'https://images.unsplash.com/photo-1534536281715-e28d76689b4d?q=80&w=2070&auto=format&fit=crop' }
     ];
 
     const filteredCats = currentView === 'top_level'
-        ? staticCategories.filter(c => ['Men', 'Women'].includes(c.name))
+        ? staticCategories.filter(c => ['Men', 'Women', 'Cosmetics', 'Contact Us'].includes(c.name))
         : currentView === 'women_sub'
-            ? staticCategories.filter(c => ['Sarees', 'Dresses'].includes(c.name))
+            ? [
+                { id: 'sarees', name: 'Sarees', image_url: 'https://mykaladhar.com/cdn/shop/articles/Kaladhar___October_Blog_Image.jpg?v=1698919472' },
+                { id: 'dresses', name: 'Dresses', image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGmODoC975mc0ZmYnfbqj1r82ZSNECmKKz5w&s' }
+            ]
             : [];
 
     return (

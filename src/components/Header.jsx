@@ -14,7 +14,8 @@ const categories = [
             { label: 'Sarees', to: '/?category=Sarees' },
             { label: 'Dresses', to: '/?category=Dresses' },
         ]
-    }
+    },
+    { label: 'Cosmetics', to: '/?category=Cosmetics' }
 ];
 
 const navLinks = [
