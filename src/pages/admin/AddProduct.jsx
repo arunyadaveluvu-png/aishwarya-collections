@@ -207,8 +207,8 @@ const AddProduct = () => {
                         </div>
                     </div>
 
-                    {/* Sizes Section */}
-                    {(parentCategory === 'Men' || product.category === 'Dresses') && (
+                    {/* Sizes Section - Available for Men and Women fashion categories */}
+                    {(parentCategory === 'Men' || parentCategory === 'Women') && (
                         <div className="glass-morphism" style={{ padding: '2rem', borderRadius: '20px', backgroundColor: 'rgba(212, 175, 55, 0.05)' }}>
                             <label style={{ display: 'block', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: '600', color: 'var(--primary)' }}>Available Sizes & Quantities</label>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

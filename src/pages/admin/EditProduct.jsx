@@ -269,13 +269,18 @@ const EditProduct = () => {
                         </div>
                     </div>
 
-                    {/* Sizes Section */}
-                    {(parentCategory === 'Men' || product.category === 'Dresses') && (
+                    {/* Sizes Section - Available for Men and Women fashion categories */}
+                    {(parentCategory === 'Men' || parentCategory === 'Women') && (
                         <div className="glass-morphism" style={{ padding: '2rem', borderRadius: '20px', backgroundColor: 'rgba(212, 175, 55, 0.05)' }}>
                             <label style={{ display: 'block', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: '600', color: 'var(--primary)' }}>Available Sizes & Quantities</label>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {['S', 'M', 'L', 'XL', 'XXL'].map(size => {
-                                    const isSelected = product.sizes && product.sizes.hasOwnProperty(size);
+                                    // Ensure product.sizes is treated as a map
+                                    const sizeMap = (product.sizes && typeof product.sizes === 'object' && !Array.isArray(product.sizes))
+                                        ? product.sizes
+                                        : (Array.isArray(product.sizes) ? product.sizes.reduce((acc, curr) => ({ ...acc, [curr]: 10 }), {}) : {});
+
+                                    const isSelected = sizeMap.hasOwnProperty(size);
                                     return (
                                         <div key={size} style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                             <button
@@ -283,14 +288,17 @@ const EditProduct = () => {
                                                 type="button"
                                                 onClick={() => {
                                                     setProduct(prev => {
-                                                        const newSizes = { ...(prev.sizes || {}) };
+                                                        const currentSizes = (prev.sizes && typeof prev.sizes === 'object' && !Array.isArray(prev.sizes))
+                                                            ? { ...prev.sizes }
+                                                            : (Array.isArray(prev.sizes) ? prev.sizes.reduce((acc, curr) => ({ ...acc, [curr]: 10 }), {}) : {});
+
                                                         if (isSelected) {
-                                                            delete newSizes[size];
+                                                            delete currentSizes[size];
                                                         } else {
-                                                            newSizes[size] = 10;
+                                                            currentSizes[size] = 10;
                                                         }
-                                                        const totalStock = Object.values(newSizes).reduce((a, b) => a + (parseInt(b) || 0), 0);
-                                                        return { ...prev, sizes: newSizes, stock: totalStock || prev.stock };
+                                                        const totalStock = Object.values(currentSizes).reduce((a, b) => a + (parseInt(b) || 0), 0);
+                                                        return { ...prev, sizes: currentSizes, stock: totalStock || prev.stock };
                                                     });
                                                 }}
                                                 style={{
@@ -313,11 +321,15 @@ const EditProduct = () => {
                                                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Quantity:</span>
                                                     <input
                                                         type="number"
-                                                        value={product.sizes[size]}
+                                                        value={sizeMap[size] || 0}
                                                         onChange={(e) => {
                                                             const val = parseInt(e.target.value) || 0;
                                                             setProduct(prev => {
-                                                                const newSizes = { ...prev.sizes, [size]: val };
+                                                                const currentSizes = (prev.sizes && typeof prev.sizes === 'object' && !Array.isArray(prev.sizes))
+                                                                    ? { ...prev.sizes }
+                                                                    : (Array.isArray(prev.sizes) ? prev.sizes.reduce((acc, curr) => ({ ...acc, [curr]: 10 }), {}) : {});
+
+                                                                const newSizes = { ...currentSizes, [size]: val };
                                                                 const totalStock = Object.values(newSizes).reduce((a, b) => a + (parseInt(b) || 0), 0);
                                                                 return { ...prev, sizes: newSizes, stock: totalStock };
                                                             });

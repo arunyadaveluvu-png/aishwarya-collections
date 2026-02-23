@@ -187,62 +187,101 @@ const ProductDetails = ({ addToCart }) => {
                         <div style={{ marginBottom: '2.5rem' }}>
                             <h4 style={{ marginBottom: '1rem' }}>Select Size</h4>
                             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                                {(Array.isArray(product.sizes) ? product.sizes : Object.keys(product.sizes)).map(size => {
-                                    const sizeStock = Array.isArray(product.sizes) ? 10 : product.sizes[size]; // Treat legacy array as in-stock (10)
-                                    const isOutOfStock = sizeStock <= 0;
+                                {(() => {
+                                    // Robust check for size format
+                                    const sizesToRender = Array.isArray(product.sizes)
+                                        ? product.sizes
+                                        : (product.sizes && typeof product.sizes === 'object' ? Object.keys(product.sizes) : []);
 
-                                    return (
-                                        <button
-                                            key={size}
-                                            onClick={() => !isOutOfStock && setSelectedSize(size)}
-                                            disabled={isOutOfStock}
-                                            style={{
-                                                width: '50px',
-                                                height: '50px',
-                                                borderRadius: '4px',
-                                                border: selectedSize === size ? '2px solid var(--primary)' : '1px solid var(--border)',
-                                                backgroundColor: isOutOfStock ? '#f3f4f6' : (selectedSize === size ? 'var(--bg-alt)' : 'white'),
-                                                color: isOutOfStock ? '#9ca3af' : (selectedSize === size ? 'var(--primary)' : 'var(--secondary)'),
-                                                fontWeight: 'bold',
-                                                cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-                                                transition: 'all 0.2s',
-                                                position: 'relative',
-                                                opacity: isOutOfStock ? 0.6 : 1
-                                            }}
-                                        >
-                                            {size}
-                                            {isOutOfStock && (
-                                                <div style={{
-                                                    position: 'absolute',
-                                                    top: '50%',
-                                                    left: '0',
-                                                    width: '100%',
-                                                    height: '1px',
-                                                    backgroundColor: '#9ca3af',
-                                                    transform: 'rotate(-45deg)'
-                                                }}></div>
-                                            )}
-                                        </button>
-                                    );
-                                })}
+                                    return sizesToRender.map(size => {
+                                        const sizeStock = Array.isArray(product.sizes) ? 10 : product.sizes[size];
+                                        const isOutOfStock = sizeStock <= 0;
+
+                                        return (
+                                            <button
+                                                key={size}
+                                                onClick={() => setSelectedSize(size)}
+                                                style={{
+                                                    width: '50px',
+                                                    height: '50px',
+                                                    borderRadius: '4px',
+                                                    border: selectedSize === size ? '2px solid var(--primary)' : '1px solid var(--border)',
+                                                    backgroundColor: selectedSize === size ? 'var(--bg-alt)' : (isOutOfStock ? '#f9fafb' : 'white'),
+                                                    color: selectedSize === size ? 'var(--primary)' : (isOutOfStock ? '#9ca3af' : 'var(--secondary)'),
+                                                    fontWeight: 'bold',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    position: 'relative',
+                                                    opacity: isOutOfStock ? 0.7 : 1
+                                                }}
+                                            >
+                                                {size}
+                                                {isOutOfStock && (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        bottom: '4px',
+                                                        width: '100%',
+                                                        textAlign: 'center',
+                                                        fontSize: '0.5rem',
+                                                        color: '#dc2626',
+                                                        fontWeight: 'bold'
+                                                    }}>NA</div>
+                                                )}
+                                            </button>
+                                        );
+                                    });
+                                })()}
                             </div>
+
+                            {/* Selected Size Stock Status */}
+                            {selectedSize && (
+                                <div style={{ marginTop: '1rem', fontSize: '0.9rem', fontWeight: '600' }}>
+                                    {(() => {
+                                        const stock = Array.isArray(product.sizes) ? 10 : (product.sizes[selectedSize] || 0);
+                                        if (stock <= 0) {
+                                            return <span style={{ color: '#dc2626' }}>Not Available</span>;
+                                        } else if (stock <= 5) {
+                                            return <span style={{ color: '#d97706' }}>Only {stock} pieces left - Order soon!</span>;
+                                        } else {
+                                            return <span style={{ color: '#16a34a' }}>In Stock ({stock} available)</span>;
+                                        }
+                                    })()}
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    <div style={{ display: 'flex', gap: '1rem' }}>
+                    {/* Action Buttons */}
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '2.5rem' }}>
                         <button
-                            className="btn-primary"
-                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '16px' }}
                             onClick={() => {
-                                if (product.sizes && product.sizes.length > 0 && !selectedSize) {
-                                    alert('Please select a size first!');
+                                const stock = Array.isArray(product.sizes) ? 10 : (product.sizes[selectedSize] || 0);
+                                if (!selectedSize && product.sizes && (Array.isArray(product.sizes) ? product.sizes.length > 0 : Object.keys(product.sizes).length > 0)) {
+                                    alert('Please select a size first');
                                     return;
                                 }
-                                addToCart(product, selectedSize);
+                                if (selectedSize && stock <= 0) {
+                                    alert('This size is currently not available');
+                                    return;
+                                }
+                                addToCart(product, 1, selectedSize);
+                            }}
+                            className="btn-primary"
+                            disabled={selectedSize && (Array.isArray(product.sizes) ? false : (product.sizes[selectedSize] || 0) <= 0)}
+                            style={{
+                                flex: 1,
+                                height: '56px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '12px',
+                                fontSize: '1.1rem',
+                                opacity: (selectedSize && (Array.isArray(product.sizes) ? false : (product.sizes[selectedSize] || 0) <= 0)) ? 0.6 : 1,
+                                cursor: (selectedSize && (Array.isArray(product.sizes) ? false : (product.sizes[selectedSize] || 0) <= 0)) ? 'not-allowed' : 'pointer'
                             }}
                         >
-                            <ShoppingCart size={20} />
-                            Add to Cart
+                            <ShoppingCart size={22} />
+                            {(selectedSize && (Array.isArray(product.sizes) ? false : (product.sizes[selectedSize] || 0) <= 0)) ? 'Not Available' : 'Add to Cart'}
                         </button>
                         <button
                             onClick={() => toggleWishlist(product.id)}
