@@ -6,7 +6,9 @@ import {
     Image as ImageIcon,
     X,
     UploadCloud,
-    CheckCircle2
+    CheckCircle2,
+    Camera,
+    FolderOpen
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -166,7 +168,6 @@ const AddProduct = () => {
                                         onChange={(e) => {
                                             const val = e.target.value;
                                             setParentCategory(val);
-                                            // Auto-set category if it's top-level
                                             if (val === 'Men' || val === 'Cosmetics') {
                                                 setProduct(prev => ({ ...prev, category: val, sizes: [] }));
                                             } else {
@@ -205,7 +206,7 @@ const AddProduct = () => {
                         </div>
                     </div>
 
-                    {/* Sizes Section - Now structured like the other inputs */}
+                    {/* Sizes Section */}
                     {(parentCategory === 'Men' || product.category === 'Dresses') && (
                         <div className="glass-morphism" style={{ padding: '2rem', borderRadius: '20px', backgroundColor: 'rgba(212, 175, 55, 0.05)' }}>
                             <label style={{ display: 'block', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: '600', color: 'var(--primary)' }}>Select Available Sizes</label>
@@ -241,10 +242,6 @@ const AddProduct = () => {
                                     );
                                 })}
                             </div>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '15px' }}>
-                                <ImageIcon size={14} style={{ verticalAlign: 'middle', marginRight: '5px' }} />
-                                Customers can choose from these sizes on the product page.
-                            </p>
                         </div>
                     )}
 
@@ -306,7 +303,6 @@ const AddProduct = () => {
                         <label style={{ display: 'block', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: '600' }}>Product Image</label>
 
                         <div
-                            onClick={() => document.getElementById('product-image-upload').click()}
                             style={{
                                 width: '100%',
                                 aspectRatio: '3/4',
@@ -318,17 +314,9 @@ const AddProduct = () => {
                                 justifyContent: 'center',
                                 overflow: 'hidden',
                                 position: 'relative',
-                                backgroundColor: 'white',
-                                cursor: 'pointer'
+                                backgroundColor: 'white'
                             }}
                         >
-                            <input
-                                id="product-image-upload"
-                                type="file"
-                                accept="image/*"
-                                onChange={handleFileChange}
-                                style={{ display: 'none' }}
-                            />
                             {product.image_url ? (
                                 <>
                                     <img
@@ -338,8 +326,7 @@ const AddProduct = () => {
                                     />
                                     <button
                                         type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
+                                        onClick={() => {
                                             setProduct(prev => ({ ...prev, image_url: '' }));
                                             setImageFile(null);
                                         }}
@@ -347,23 +334,82 @@ const AddProduct = () => {
                                             position: 'absolute',
                                             top: '10px',
                                             right: '10px',
-                                            padding: '5px',
+                                            padding: '8px',
                                             borderRadius: '50%',
-                                            backgroundColor: 'rgba(0,0,0,0.5)',
+                                            backgroundColor: 'rgba(0,0,0,0.6)',
                                             color: 'white',
                                             border: 'none',
-                                            cursor: 'pointer'
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
                                         }}
                                     >
-                                        <X size={16} />
+                                        <X size={18} />
                                     </button>
                                 </>
                             ) : (
-                                <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-                                    <ImageIcon size={48} style={{ marginBottom: '10px', opacity: 0.3 }} />
-                                    <p style={{ fontSize: '0.8rem' }}>Upload or take product photo</p>
+                                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '1rem' }}>
+                                    <ImageIcon size={48} style={{ marginBottom: '1rem', opacity: 0.3 }} />
+                                    <p style={{ fontSize: '0.85rem', fontWeight: '500' }}>No image selected</p>
                                 </div>
                             )}
+                        </div>
+
+                        {/* Upload Controls */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '1.5rem' }}>
+                            <input
+                                id="camera-upload"
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                onChange={handleFileChange}
+                                style={{ display: 'none' }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => document.getElementById('camera-upload').click()}
+                                className="btn-outline"
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '12px 5px',
+                                    fontSize: '0.75rem',
+                                    borderColor: 'var(--primary-light)',
+                                    color: 'var(--primary)'
+                                }}
+                            >
+                                <Camera size={20} />
+                                Take Photo
+                            </button>
+
+                            <input
+                                id="file-upload"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                                style={{ display: 'none' }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => document.getElementById('file-upload').click()}
+                                className="btn-outline"
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '12px 5px',
+                                    fontSize: '0.75rem',
+                                    borderColor: 'var(--primary-light)',
+                                    color: 'var(--primary)'
+                                }}
+                            >
+                                <FolderOpen size={20} />
+                                Choose File
+                            </button>
                         </div>
 
                         <div style={{ marginTop: '1.5rem' }}>

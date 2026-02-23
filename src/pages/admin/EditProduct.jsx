@@ -7,7 +7,9 @@ import {
     X,
     UploadCloud,
     CheckCircle2,
-    Loader2
+    Loader2,
+    Camera,
+    FolderOpen
 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -54,7 +56,7 @@ const EditProduct = () => {
                         setParentCategory('Men');
                     } else if (data.category === 'Cosmetics') {
                         setParentCategory('Cosmetics');
-                    } else if (['Sarees', 'Dresses', 'Silk', 'Cotton', 'Designer', 'Wedding', 'Kurtis & Suits', 'Lehenga', 'Handloom', 'Chiffon', 'Georgette', 'Banarasi', 'Kanjivaram', 'Pattu', 'Ready-to-Wear', 'Party Wear', 'Daily Wear'].includes(data.category)) {
+                    } else {
                         setParentCategory('Women');
                     }
                 }
@@ -355,7 +357,6 @@ const EditProduct = () => {
                         <label style={{ display: 'block', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: '600' }}>Product Image</label>
 
                         <div
-                            onClick={() => document.getElementById('product-image-edit').click()}
                             style={{
                                 width: '100%',
                                 aspectRatio: '3/4',
@@ -367,17 +368,9 @@ const EditProduct = () => {
                                 justifyContent: 'center',
                                 overflow: 'hidden',
                                 position: 'relative',
-                                backgroundColor: 'white',
-                                cursor: 'pointer'
+                                backgroundColor: 'white'
                             }}
                         >
-                            <input
-                                id="product-image-edit"
-                                type="file"
-                                accept="image/*"
-                                onChange={handleFileChange}
-                                style={{ display: 'none' }}
-                            />
                             {product.image_url ? (
                                 <>
                                     <img
@@ -387,8 +380,7 @@ const EditProduct = () => {
                                     />
                                     <button
                                         type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
+                                        onClick={() => {
                                             setProduct(prev => ({ ...prev, image_url: '' }));
                                             setImageFile(null);
                                         }}
@@ -396,23 +388,82 @@ const EditProduct = () => {
                                             position: 'absolute',
                                             top: '10px',
                                             right: '10px',
-                                            padding: '5px',
+                                            padding: '8px',
                                             borderRadius: '50%',
-                                            backgroundColor: 'rgba(0,0,0,0.5)',
+                                            backgroundColor: 'rgba(0,0,0,0.6)',
                                             color: 'white',
                                             border: 'none',
-                                            cursor: 'pointer'
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
                                         }}
                                     >
-                                        <X size={16} />
+                                        <X size={18} />
                                     </button>
                                 </>
                             ) : (
-                                <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-                                    <ImageIcon size={48} style={{ marginBottom: '10px', opacity: 0.3 }} />
-                                    <p style={{ fontSize: '0.8rem' }}>Click to upload new image</p>
+                                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '1rem' }}>
+                                    <ImageIcon size={48} style={{ marginBottom: '1rem', opacity: 0.3 }} />
+                                    <p style={{ fontSize: '0.85rem', fontWeight: '500' }}>No image selected</p>
                                 </div>
                             )}
+                        </div>
+
+                        {/* Upload Controls */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '1.5rem' }}>
+                            <input
+                                id="camera-upload-edit"
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                onChange={handleFileChange}
+                                style={{ display: 'none' }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => document.getElementById('camera-upload-edit').click()}
+                                className="btn-outline"
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '12px 5px',
+                                    fontSize: '0.75rem',
+                                    borderColor: 'var(--primary-light)',
+                                    color: 'var(--primary)'
+                                }}
+                            >
+                                <Camera size={20} />
+                                Take Photo
+                            </button>
+
+                            <input
+                                id="file-upload-edit"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                                style={{ display: 'none' }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => document.getElementById('file-upload-edit').click()}
+                                className="btn-outline"
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '12px 5px',
+                                    fontSize: '0.75rem',
+                                    borderColor: 'var(--primary-light)',
+                                    color: 'var(--primary)'
+                                }}
+                            >
+                                <FolderOpen size={20} />
+                                Choose File
+                            </button>
                         </div>
 
                         <div style={{ marginTop: '1.5rem' }}>
