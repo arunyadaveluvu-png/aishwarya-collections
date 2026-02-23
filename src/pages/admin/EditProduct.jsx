@@ -49,7 +49,11 @@ const EditProduct = () => {
                         ...data,
                         price: data.price.toString(),
                         discount_price: data.discount_price ? data.discount_price.toString() : '',
-                        sizes: (data.sizes && typeof data.sizes === 'object' && !Array.isArray(data.sizes)) ? data.sizes : {}
+                        sizes: (data.sizes && typeof data.sizes === 'object' && !Array.isArray(data.sizes))
+                            ? data.sizes
+                            : (Array.isArray(data.sizes)
+                                ? data.sizes.reduce((acc, curr) => ({ ...acc, [curr]: 10 }), {})
+                                : {})
                     });
                     // Determine parent category
                     if (data.category === 'Men') {

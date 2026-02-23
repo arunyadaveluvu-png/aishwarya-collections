@@ -182,13 +182,13 @@ const ProductDetails = ({ addToCart }) => {
                         </p>
                     </div>
 
-                    {/* Sizes Section - Dynamic from DB (JSONB format) */}
-                    {product.sizes && Object.keys(product.sizes).length > 0 && (
+                    {/* Sizes Section - Dynamic from DB (Supports both legacy Array and new JSONB Object) */}
+                    {product.sizes && (Array.isArray(product.sizes) ? product.sizes.length > 0 : Object.keys(product.sizes).length > 0) && (
                         <div style={{ marginBottom: '2.5rem' }}>
                             <h4 style={{ marginBottom: '1rem' }}>Select Size</h4>
                             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                                {Object.keys(product.sizes).map(size => {
-                                    const sizeStock = product.sizes[size];
+                                {(Array.isArray(product.sizes) ? product.sizes : Object.keys(product.sizes)).map(size => {
+                                    const sizeStock = Array.isArray(product.sizes) ? 10 : product.sizes[size]; // Treat legacy array as in-stock (10)
                                     const isOutOfStock = sizeStock <= 0;
 
                                     return (
