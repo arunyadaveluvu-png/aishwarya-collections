@@ -19,12 +19,13 @@ const EditProduct = () => {
     const [success, setSuccess] = useState(false);
     const [product, setProduct] = useState({
         name: '',
-        category: 'Silk',
+        category: '',
         price: '',
         stock: 0,
         image_url: '',
         description: ''
     });
+    const [parentCategory, setParentCategory] = useState(''); // 'Men' or 'Women'
 
     const [imageFile, setImageFile] = useState(null);
 
@@ -44,6 +45,12 @@ const EditProduct = () => {
                         ...data,
                         price: data.price.toString()
                     });
+                    // Determine parent category
+                    if (data.category === 'Men') {
+                        setParentCategory('Men');
+                    } else if (['Sarees', 'Dresses', 'Silk', 'Cotton', 'Designer', 'Wedding', 'Kurtis & Suits', 'Lehenga'].includes(data.category)) {
+                        setParentCategory('Women');
+                    }
                 }
             } catch (error) {
                 console.error('Error fetching product:', error.message);
@@ -215,16 +222,51 @@ const EditProduct = () => {
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <div>
-                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Category</label>
+                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Parent Category</label>
                                 <select
-                                    name="category"
-                                    value={product.category}
-                                    onChange={handleChange}
+                                    value={parentCategory}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setParentCategory(val);
+                                        if (val === 'Men') {
+                                            setProduct(prev => ({ ...prev, category: 'Men' }));
+                                        } else {
+                                            setProduct(prev => ({ ...prev, category: '' }));
+                                        }
+                                    }}
+                                    required
                                     style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'white' }}
                                 >
-                                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                    <option value="">Select Parent</option>
+                                    <option value="Men">Men</option>
+                                    <option value="Women">Women</option>
                                 </select>
                             </div>
+                            {parentCategory === 'Women' && (
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Sub-Category</label>
+                                    <select
+                                        name="category"
+                                        value={product.category}
+                                        onChange={handleChange}
+                                        required
+                                        style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'white' }}
+                                    >
+                                        <option value="">Select Sub</option>
+                                        <option value="Sarees">Sarees</option>
+                                        <option value="Dresses">Dresses</option>
+                                        <option value="Silk">Silk</option>
+                                        <option value="Cotton">Cotton</option>
+                                        <option value="Designer">Designer</option>
+                                        <option value="Wedding">Wedding</option>
+                                        <option value="Kurtis & Suits">Kurtis & Suits</option>
+                                        <option value="Lehenga">Lehenga</option>
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Price (₹)</label>
                                 <input
@@ -237,19 +279,18 @@ const EditProduct = () => {
                                     style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
                                 />
                             </div>
-                        </div>
-
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Stock Quantity</label>
-                            <input
-                                type="number"
-                                name="stock"
-                                value={product.stock}
-                                onChange={handleChange}
-                                required
-                                placeholder="e.g. 10"
-                                style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
-                            />
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Stock Quantity</label>
+                                <input
+                                    type="number"
+                                    name="stock"
+                                    value={product.stock}
+                                    onChange={handleChange}
+                                    required
+                                    placeholder="e.g. 10"
+                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--border)' }}
+                                />
+                            </div>
                         </div>
 
 

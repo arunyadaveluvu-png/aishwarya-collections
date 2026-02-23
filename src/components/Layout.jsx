@@ -5,6 +5,7 @@ import Logo from './Logo';
 import SessionTimeoutModal from './SessionTimeoutModal';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../supabase';
+import FloatingContact from './FloatingContact';
 
 const Layout = ({ children, cartCount }) => {
     const location = useLocation();
@@ -42,6 +43,8 @@ const Layout = ({ children, cartCount }) => {
             <main style={{ flex: 1 }}>
                 {children}
             </main>
+
+            {!isAdminRoute && <FloatingContact />}
 
             <SessionTimeoutModal
                 isOpen={showTimeoutModal}
@@ -138,9 +141,20 @@ const Layout = ({ children, cartCount }) => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    flexWrap: 'wrap',
                     gap: '5px'
                 }}>
-                    Copy-right © Arun. Made with <span style={{ color: '#ff4d4d' }}>❤️</span> by Arun Software Solutions.
+                    <span>Copy-right © Arun. Made with <span style={{ color: '#ff4d4d' }}>❤️</span> by</span>
+                    <a
+                        href="https://showcase-ten-delta.vercel.app/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'inherit', textDecoration: 'none', fontWeight: 'bold', borderBottom: '1px solid rgba(0,0,0,0.2)' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'inherit'}
+                    >
+                        Arun Software Solutions
+                    </a>
                 </div>
             </footer>
         </div>

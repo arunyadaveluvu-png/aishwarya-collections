@@ -1,19 +1,25 @@
 import React from 'react';
-import { Search, ShoppingCart, User, Menu, X, Heart, LogOut, ShieldCheck } from 'lucide-react';
+import { Search, ShoppingCart, User, Menu, X, Heart, LogOut, ShieldCheck, ChevronDown, ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useWishlist } from '../context/WishlistContext';
 import Logo from './Logo';
 
+const categories = [
+    { label: 'Men', to: '/?category=Men' },
+    {
+        label: 'Women',
+        to: '/?category=Women',
+        subcategories: [
+            { label: 'Sarees', to: '/?category=Sarees' },
+            { label: 'Dresses', to: '/?category=Dresses' },
+        ]
+    }
+];
+
 const navLinks = [
     { to: '/', label: 'Home' },
-    { to: '/?category=Silk', label: 'Silk' },
-    { to: '/?category=Cotton', label: 'Cotton' },
-    { to: '/?category=Designer', label: 'Designer' },
-    { to: '/?category=Wedding', label: 'Wedding' },
-    { to: '/?category=Party%20wear', label: 'Party Wear' },
-    { to: '/?category=Lehenga', label: 'Lehengas' },
-    { to: '/?category=Kurtis%20&%20Suits', label: 'Kurtis' },
+    ...categories.map(cat => ({ to: cat.to, label: cat.label, subcategories: cat.subcategories })),
 ];
 
 const Header = ({ cartCount = 0 }) => {
@@ -90,7 +96,30 @@ const Header = ({ cartCount = 0 }) => {
                         justifyContent: 'center'
                     }}>
                         {navLinks.map(link => (
-                            <Link key={link.to} to={link.to} className="nav-link">{link.label}</Link>
+                            <div key={link.label} className="nav-item-container" style={{ position: 'relative' }}>
+                                {link.subcategories ? (
+                                    <div className="dropdown-trigger" style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        cursor: 'pointer',
+                                        padding: '5px 0'
+                                    }}>
+                                        <Link to={link.to} className="nav-link">{link.label}</Link>
+                                        <ChevronDown size={14} className="chevron-icon" />
+
+                                        <div className="dropdown-menu glass-morphism">
+                                            {link.subcategories.map(sub => (
+                                                <Link key={sub.label} to={sub.to} className="dropdown-item">
+                                                    {sub.label}
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <Link to={link.to} className="nav-link">{link.label}</Link>
+                                )}
+                            </div>
                         ))}
                         {isAdmin && (
                             <Link to="/admin" className="nav-link" style={{
@@ -272,25 +301,56 @@ const Header = ({ cartCount = 0 }) => {
                         Shop
                     </div>
                     {navLinks.map(link => (
-                        <Link
-                            key={link.to}
-                            to={link.to}
-                            onClick={closeMobileMenu}
-                            style={{
-                                display: 'block',
-                                padding: '0.8rem 1.5rem',
-                                textDecoration: 'none',
-                                color: 'var(--secondary)',
-                                fontSize: '1rem',
-                                fontWeight: '500',
-                                borderBottom: '1px solid #f5f5f5',
-                                transition: 'background 0.2s'
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                            {link.label}
-                        </Link>
+                        <div key={link.label}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pr: '1rem' }}>
+                                <Link
+                                    to={link.to}
+                                    onClick={closeMobileMenu}
+                                    style={{
+                                        display: 'block',
+                                        padding: '0.8rem 1.5rem',
+                                        textDecoration: 'none',
+                                        color: 'var(--secondary)',
+                                        fontSize: '1rem',
+                                        fontWeight: '500',
+                                        flex: 1,
+                                        transition: 'background 0.2s'
+                                    }}
+                                >
+                                    {link.label}
+                                </Link>
+                                {link.subcategories && (
+                                    <div style={{ padding: '0.8rem 1.5rem', cursor: 'pointer' }} onClick={(e) => {
+                                        e.preventDefault();
+                                        const el = document.getElementById(`sub-${link.label}`);
+                                        if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+                                    }}>
+                                        <ChevronDown size={18} color="var(--text-muted)" />
+                                    </div>
+                                )}
+                            </div>
+                            {link.subcategories && (
+                                <div id={`sub-${link.label}`} style={{ display: 'none', backgroundColor: '#fafafa', borderLeft: '3px solid var(--primary)', marginLeft: '1.5rem' }}>
+                                    {link.subcategories.map(sub => (
+                                        <Link
+                                            key={sub.label}
+                                            to={sub.to}
+                                            onClick={closeMobileMenu}
+                                            style={{
+                                                display: 'block',
+                                                padding: '0.6rem 1.5rem',
+                                                textDecoration: 'none',
+                                                color: 'var(--secondary)',
+                                                fontSize: '0.9rem',
+                                                borderBottom: '1px solid #eee'
+                                            }}
+                                        >
+                                            {sub.label}
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     ))}
                     {isAdmin && (
                         <Link to="/admin" onClick={closeMobileMenu} style={{
