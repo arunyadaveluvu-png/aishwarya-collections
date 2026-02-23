@@ -214,6 +214,27 @@ button {
   animation: fadeIn 0.8s ease forwards;
 }
 
+/* ── Category Grid ── */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 3rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.category-circle-wrapper {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  margin: 0 auto 1.5rem;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid white;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
 /* Loading Spinner */
 .loading-spinner {
   width: 40px;
@@ -365,5 +386,21 @@ button {
 
   .admin-bottom-nav {
     display: flex !important;
+  }
+
+  /* Category Grid: 2 columns on mobile */
+  .category-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1rem !important;
+  }
+
+  .category-circle-wrapper {
+    width: 140px !important;
+    height: 140px !important;
+    border-width: 2px !important;
+  }
+
+  .category-circle-wrapper h3 {
+    font-size: 1.2rem !important;
   }
 }

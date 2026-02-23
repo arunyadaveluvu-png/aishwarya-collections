@@ -93,7 +93,7 @@ const Home = ({ addToCart }) => {
     };
 
     const renderCategories = (catList) => (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '3rem', maxWidth: '800px', margin: '0 auto' }}>
+        <div className="category-grid">
             {catList.map((cat) => (
                 <div
                     key={cat.id}
@@ -103,17 +103,7 @@ const Home = ({ addToCart }) => {
                     }}
                     style={{ textAlign: 'center', cursor: 'pointer' }}
                 >
-                    <div className="category-circle-wrapper" style={{
-                        position: 'relative',
-                        width: '240px',
-                        height: '240px',
-                        margin: '0 auto 1.5rem',
-                        borderRadius: '50%',
-                        overflow: 'hidden',
-                        border: '4px solid white',
-                        boxShadow: '0 15px 35px rgba(0,0,0,0.1)',
-                        transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                    }}
+                    <div className="category-circle-wrapper"
                         onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05) translateY(-10px)'}
                         onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                     >
