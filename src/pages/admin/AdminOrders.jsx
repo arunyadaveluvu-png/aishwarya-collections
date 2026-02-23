@@ -11,7 +11,8 @@ import {
     MapPin,
     Calendar,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    Printer
 } from 'lucide-react';
 
 const AdminOrders = () => {
@@ -22,16 +23,15 @@ const AdminOrders = () => {
     const [expandedOrder, setExpandedOrder] = useState(null);
     const [pendingStatus, setPendingStatus] = useState({}); // { orderId: newStatus }
     const [updatingId, setUpdatingId] = useState(null);
+    const [selectedOrders, setSelectedOrders] = useState([]);
 
     useEffect(() => {
         fetchOrders();
 
-        // Subscribe to real-time changes
         const subscription = supabase
             .channel('orders_realtime')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-                console.log('[Aishwarya Collections] Real-time change detected:', payload);
-                fetchOrders(); // Refresh all to ensure join data is correct
+                fetchOrders();
             })
             .subscribe();
 
@@ -43,44 +43,68 @@ const AdminOrders = () => {
     const fetchOrders = async () => {
         try {
             setLoading(true);
-
-            // Diagnostic: Log current user email
-            const { data: { user } } = await supabase.auth.getUser();
-            console.log('[Aishwarya Collections] Current User Email:', user?.email);
-
-            // Fetch orders with items
             const { data, error } = await supabase
                 .from('orders')
                 .select('*, order_items(*, products(*))')
                 .order('created_at', { ascending: false });
 
-            if (error) {
-                console.error('[Aishwarya Collections] Detailed Fetch Error:', error);
-                // Try a simpler fetch to see if it's the join failing
-                console.log('[Aishwarya Collections] Attempting simplified fetch...');
-                const { data: simpleData, error: simpleError } = await supabase
-                    .from('orders')
-                    .select('*')
-                    .limit(5);
-                console.log('[Aishwarya Collections] Simplified Fetch Result:', { count: simpleData?.length, error: simpleError });
-                throw error;
-            }
-
-            console.log('[Aishwarya Collections] Successfully fetched orders:', data?.length || 0);
-            if (data && data.length > 0) {
-                console.log('[Aishwarya Collections] Data structure check:', {
-                    hasItems: !!data[0].order_items,
-                    itemsCount: data[0].order_items?.length,
-                    hasProduct: !!data[0].order_items?.[0]?.products
-                });
-            }
-
+            if (error) throw error;
             setOrders(data || []);
         } catch (error) {
-            console.error('[AdminOrders] Error in fetchOrders:', error.message);
+            console.error('[AdminOrders] Error:', error.message);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSelectOrder = (orderId) => {
+        setSelectedOrders(prev =>
+            prev.includes(orderId)
+                ? prev.filter(id => id !== orderId)
+                : [...prev, orderId]
+        );
+    };
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            const printableIds = filteredOrders
+                .filter(o => o.status !== 'Delivered')
+                .map(o => o.id);
+            setSelectedOrders(printableIds);
+        } else {
+            setSelectedOrders([]);
+        }
+    };
+
+    const handlePrintSlips = (singleOrder = null) => {
+        const orderIdsToPrint = singleOrder ? [singleOrder.id] : selectedOrders;
+        if (orderIdsToPrint.length === 0) return;
+
+        // Custom print triggering
+        const printStyles = document.createElement('style');
+        printStyles.id = 'print-dispatch-styles';
+        printStyles.innerHTML = `
+            @media print {
+                body * { visibility: hidden; }
+                .dispatch-slip-printable, .dispatch-slip-printable * { visibility: visible; }
+                .dispatch-slip-printable { 
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    display: block !important;
+                }
+                .no-print { display: none !important; }
+            }
+        `;
+        document.head.appendChild(printStyles);
+
+        window.print();
+
+        setTimeout(() => {
+            const styleElement = document.getElementById('print-dispatch-styles');
+            if (styleElement) styleElement.remove();
+        }, 500);
     };
 
     const updateOrderStatus = async (orderId) => {
@@ -89,40 +113,24 @@ const AdminOrders = () => {
 
         try {
             setUpdatingId(orderId);
-            console.log('[AdminOrders] Attempting to update order:', orderId, 'to status:', newStatus);
-
-            const { data, error, status: httpStatus } = await supabase
+            const { data, error } = await supabase
                 .from('orders')
                 .update({ status: newStatus })
                 .eq('id', orderId)
                 .select();
 
-            if (error) {
-                console.error('[AdminOrders] Supabase Update Error:', error);
-                throw error;
-            }
+            if (error) throw error;
 
-            console.log('[AdminOrders] Supabase Response Status:', httpStatus);
-            console.log('[AdminOrders] Updated Data result:', data);
-
-            if (!data || data.length === 0) {
-                console.warn('[AdminOrders] NO ROWS UPDATED! This is likely an RLS issue or invalid ID.');
-                throw new Error('Update failed. You might not have permission to modify this order.');
-            }
-
-            // Update local state
             setOrders(orders.map(order =>
                 order.id === orderId ? { ...order, status: newStatus } : order
             ));
 
-            // Clear pending status for this order
             const newPending = { ...pendingStatus };
             delete newPending[orderId];
             setPendingStatus(newPending);
 
-            alert(`Order status successfully updated to ${newStatus}`);
+            alert(`Order status updated to ${newStatus}`);
         } catch (error) {
-            console.error('[AdminOrders] Update Exception:', error);
             alert('Error updating status: ' + error.message);
         } finally {
             setUpdatingId(null);
@@ -130,16 +138,12 @@ const AdminOrders = () => {
     };
 
     const handleStatusChange = (orderId, status) => {
-        setPendingStatus(prev => ({
-            ...prev,
-            [orderId]: status
-        }));
+        setPendingStatus(prev => ({ ...prev, [orderId]: status }));
     };
 
     const filteredOrders = orders.filter(order => {
         const fullCustomerName = `${order.first_name} ${order.last_name}`.toLowerCase();
-        const matchesSearch = fullCustomerName.includes(searchTerm.toLowerCase()) ||
-            order.id.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = fullCustomerName.includes(searchTerm.toLowerCase()) || order.id.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = filterStatus === 'All' || order.status === filterStatus;
         return matchesSearch && matchesStatus;
     });
@@ -168,24 +172,42 @@ const AdminOrders = () => {
     }
 
     return (
-        <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <div className="admin-orders-page">
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
                     <h1 style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--secondary)' }}>Order Management</h1>
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Track and update customer order statuses.</p>
                 </div>
-                <button
-                    onClick={fetchOrders}
-                    disabled={loading}
-                    className="btn-outline"
-                    style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
-                >
-                    {loading ? 'Refreshing...' : 'Refresh Orders'}
-                </button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    {selectedOrders.length > 0 && (
+                        <button
+                            onClick={() => handlePrintSlips()}
+                            className="btn-primary"
+                            style={{
+                                padding: '0.5rem 1.2rem',
+                                fontSize: '0.85rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                background: '#2d3748'
+                            }}
+                        >
+                            <Printer size={16} /> Print {selectedOrders.length} Slips
+                        </button>
+                    )}
+                    <button
+                        onClick={fetchOrders}
+                        disabled={loading}
+                        className="btn-outline"
+                        style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
+                    >
+                        {loading ? 'Refreshing...' : 'Refresh Orders'}
+                    </button>
+                </div>
             </div>
 
             {/* Filters */}
-            <div className="glass-morphism" style={{
+            <div className="glass-morphism no-print" style={{
                 padding: '1.5rem',
                 borderRadius: '16px',
                 marginBottom: '2rem',
@@ -194,6 +216,17 @@ const AdminOrders = () => {
                 flexWrap: 'wrap',
                 alignItems: 'center'
             }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingRight: '1rem', borderRight: '1px solid var(--border)' }}>
+                    <input
+                        type="checkbox"
+                        id="select-all"
+                        onChange={handleSelectAll}
+                        checked={selectedOrders.length > 0 && selectedOrders.length === filteredOrders.filter(o => o.status !== 'Delivered').length}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                    />
+                    <label htmlFor="select-all" style={{ fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' }}>Select All</label>
+                </div>
+
                 <div style={{ position: 'relative', flex: 2, minWidth: '250px' }}>
                     <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                     <input
@@ -240,208 +273,188 @@ const AdminOrders = () => {
                     filteredOrders.map((order) => {
                         const style = getStatusColor(order.status);
                         const isExpanded = expandedOrder === order.id;
+                        const isPrintable = order.status !== 'Delivered';
+                        const isSelected = selectedOrders.includes(order.id);
 
                         return (
-                            <div key={order.id} className="glass-morphism" style={{
-                                borderRadius: '16px',
-                                overflow: 'hidden',
-                                border: '1px solid var(--border)'
-                            }}>
-                                <div
-                                    onClick={() => toggleExpand(order.id)}
-                                    style={{
-                                        padding: '1.5rem',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-                                        <div>
-                                            <div style={{ fontWeight: '700', fontSize: '1rem', color: 'var(--secondary)' }}>
-                                                #{order.id.slice(0, 8)}
+                            <React.Fragment key={order.id}>
+                                {/* Printable Slip (Hidden on screen) */}
+                                {(isSelected || (expandedOrder === order.id && isPrintable)) && (
+                                    <div className="dispatch-slip-printable" style={{ display: 'none' }}>
+                                        <div style={{ padding: '40px', border: '1px solid #000', margin: '20px', backgroundColor: 'white' }}>
+                                            <div style={{ textAlign: 'center', borderBottom: '2px solid black', paddingBottom: '15px', marginBottom: '20px' }}>
+                                                <h1 style={{ margin: 0, fontSize: '24px', letterSpacing: '2px' }}>AISHWARYA COLLECTIONS</h1>
+                                                <p style={{ margin: '5px 0', fontSize: '12px' }}>DISPATCH SLIP</p>
                                             </div>
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <Calendar size={12} />
-                                                {new Date(order.created_at).toLocaleDateString()}
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>{order.first_name} {order.last_name}</div>
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{order.city}</div>
-                                        </div>
-
-                                        <div>
-                                            <div style={{ fontWeight: '700', color: 'var(--primary)' }}>₹{order.total}</div>
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{order.order_items?.length || 0} Items</div>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-                                        <span style={{
-                                            padding: '6px 14px',
-                                            borderRadius: '20px',
-                                            fontSize: '0.8rem',
-                                            fontWeight: '600',
-                                            backgroundColor: style.bg,
-                                            color: style.text,
-                                            textTransform: 'capitalize'
-                                        }}>
-                                            {order.status || 'Pending'}
-                                        </span>
-                                        {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                    </div>
-                                </div>
-
-                                {isExpanded && (
-                                    <div style={{ padding: '0 1.5rem 1.5rem', borderTop: '1px solid rgba(0,0,0,0.05)', backgroundColor: 'rgba(0,0,0,0.01)' }}>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', padding: '1.5rem 0' }}>
-                                            <div style={{ padding: '1.5rem', backgroundColor: 'var(--bg-alt)', borderRadius: '12px', border: '1px dashed var(--primary)' }}>
-                                                <h4 style={{ fontSize: '0.9rem', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)' }}>
-                                                    <Truck size={18} /> DISPATCH SLIP
-                                                </h4>
-                                                <div style={{ display: 'grid', gap: '0.8rem' }}>
-                                                    <div>
-                                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Customer Name</div>
-                                                        <div style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--secondary)' }}>{order.first_name} {order.last_name}</div>
-                                                    </div>
-                                                    <div>
-                                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Delivery Address</div>
-                                                        <div style={{ fontSize: '0.95rem', color: 'var(--secondary)', lineHeight: '1.5', fontWeight: '500' }}>
-                                                            {order.address}<br />
-                                                            {order.city} - {order.pincode}
-                                                        </div>
-                                                    </div>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: '0.8rem', marginTop: '0.4rem' }}>
-                                                        <div>
-                                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Payment Method</div>
-                                                            <div style={{ fontSize: '0.85rem', fontWeight: '600' }}>{order.payment_method?.toUpperCase()}</div>
-                                                        </div>
-                                                        <div style={{ textAlign: 'right' }}>
-                                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Order Total</div>
-                                                            <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--primary)' }}>₹{order.total}</div>
-                                                        </div>
-                                                    </div>
+                                            <div style={{ marginBottom: '25px' }}>
+                                                <h3 style={{ fontSize: '14px', textTransform: 'uppercase', marginBottom: '10px', borderBottom: '1px solid #ddd' }}>Ship To:</h3>
+                                                <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{order.first_name} {order.last_name}</div>
+                                                <div style={{ fontSize: '16px', lineHeight: '1.4', marginTop: '5px' }}>
+                                                    {order.address}<br />
+                                                    {order.city} - {order.pincode}
                                                 </div>
                                             </div>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>Manage Status</h4>
-                                                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                                    <select
-                                                        value={pendingStatus[order.id] || order.status || 'Pending'}
-                                                        onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                                                        disabled={updatingId === order.id}
-                                                        style={{
-                                                            padding: '8px 12px',
-                                                            borderRadius: '8px',
-                                                            border: '1px solid var(--border)',
-                                                            fontSize: '0.85rem',
-                                                            backgroundColor: 'white',
-                                                            cursor: 'pointer',
-                                                            outline: 'none'
-                                                        }}
-                                                    >
-                                                        {['Pending', 'Preparing', 'Shipped', 'Delivered', 'Cancelled'].map(opt => (
-                                                            <option key={opt} value={opt}>{opt}</option>
-                                                        ))}
-                                                    </select>
-
-                                                    {pendingStatus[order.id] && pendingStatus[order.id] !== order.status && (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                updateOrderStatus(order.id);
-                                                            }}
-                                                            disabled={updatingId === order.id}
-                                                            className="btn"
-                                                            style={{
-                                                                padding: '8px 16px',
-                                                                fontSize: '0.8rem',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                gap: '5px'
-                                                            }}
-                                                        >
-                                                            {updatingId === order.id ? (
-                                                                <div className="loading-spinner" style={{ width: '12px', height: '12px' }}></div>
-                                                            ) : 'Confirm'}
-                                                        </button>
-                                                    )}
-
-                                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                                                        <Clock size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-                                                        Update Status
-                                                    </div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', fontSize: '14px' }}>
+                                                <div>
+                                                    <div style={{ color: '#666', fontSize: '10px', textTransform: 'uppercase' }}>Order ID</div>
+                                                    <div style={{ fontWeight: 'bold' }}>#{order.id.slice(0, 12).toUpperCase()}</div>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ color: '#666', fontSize: '10px', textTransform: 'uppercase' }}>Date</div>
+                                                    <div style={{ fontWeight: 'bold' }}>{new Date(order.created_at).toLocaleDateString()}</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ color: '#666', fontSize: '10px', textTransform: 'uppercase' }}>Payment Mode</div>
+                                                    <div style={{ fontWeight: 'bold' }}>{order.payment_method?.toUpperCase()}</div>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ color: '#666', fontSize: '10px', textTransform: 'uppercase' }}>Total Amount</div>
+                                                    <div style={{ fontWeight: 'bold', fontSize: '18px' }}>₹{order.total}</div>
                                                 </div>
                                             </div>
-                                        </div>
-
-                                        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '1rem', border: '1px solid var(--border)' }}>
-                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                                <thead>
-                                                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                                        <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>ITEM DETAILS</th>
-                                                        <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>CATEGORY</th>
-                                                        <th style={{ textAlign: 'center', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>SIZE</th>
-                                                        <th style={{ textAlign: 'center', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>QTY</th>
-                                                        <th style={{ textAlign: 'right', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>PRICE</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {order.order_items?.map((item) => (
-                                                        <tr key={item.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.02)' }}>
-                                                            <td style={{ padding: '0.8rem 0.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                                <img
-                                                                    src={item.products?.image_url}
-                                                                    alt=""
-                                                                    style={{ width: '40px', height: '55px', borderRadius: '4px', objectFit: 'cover' }}
-                                                                    onError={(e) => e.target.src = 'https://via.placeholder.com/150'}
-                                                                />
-                                                                <div>
-                                                                    <div style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--secondary)' }}>
-                                                                        {item.product_name || item.products?.name}
-                                                                    </div>
-                                                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                                                                        ID: {item.product_id ? item.product_id.slice(0, 8) : 'N/A'}
-                                                                    </div>
-                                                                </div>
-                                                            </td>
-                                                            <td style={{ textAlign: 'left', padding: '0.8rem 0.5rem', fontSize: '0.85rem', color: 'var(--secondary)' }}>
-                                                                {item.category || item.products?.category || 'Saree'}
-                                                            </td>
-                                                            <td style={{ textAlign: 'center', padding: '0.8rem 0.5rem' }}>
-                                                                <span style={{
-                                                                    padding: item.selected_size ? '4px 8px' : '0',
-                                                                    backgroundColor: item.selected_size ? 'var(--bg-alt)' : 'transparent',
-                                                                    color: 'var(--primary)',
-                                                                    borderRadius: '4px',
-                                                                    fontSize: '0.85rem',
-                                                                    fontWeight: '700'
-                                                                }}>
-                                                                    {item.selected_size || '-'}
-                                                                </span>
-                                                            </td>
-                                                            <td style={{ textAlign: 'center', padding: '0.8rem 0.5rem', fontSize: '0.9rem' }}>{item.quantity}</td>
-                                                            <td style={{ textAlign: 'right', padding: '0.8rem 0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>₹{item.price}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                            <div style={{ marginTop: '40px', borderTop: '1px solid #000', paddingTop: '15px', textAlign: 'center', fontSize: '10px' }}>
+                                                Professional Dispatch System - Aishwarya Collections
+                                            </div>
                                         </div>
                                     </div>
                                 )}
-                            </div>
+
+                                {/* On-Screen List Item */}
+                                <div className="glass-morphism no-print" style={{
+                                    borderRadius: '16px',
+                                    border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border)',
+                                    overflow: 'hidden'
+                                }}>
+                                    <div style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                        <input
+                                            type="checkbox"
+                                            disabled={!isPrintable}
+                                            checked={isSelected}
+                                            onChange={() => handleSelectOrder(order.id)}
+                                            style={{ width: '20px', height: '20px', cursor: isPrintable ? 'pointer' : 'not-allowed' }}
+                                        />
+                                        <div onClick={() => toggleExpand(order.id)} style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                                            <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
+                                                <div>
+                                                    <div style={{ fontWeight: '700', color: 'var(--secondary)' }}>#{order.id.slice(0, 8)}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(order.created_at).toLocaleDateString()}</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: '600' }}>{order.first_name} {order.last_name}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{order.city}</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: '700', color: 'var(--primary)' }}>₹{order.total}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{order.order_items?.length || 0} Items</div>
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+                                                <span style={{ padding: '6px 14px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '600', backgroundColor: style.bg, color: style.text }}>
+                                                    {order.status || 'Pending'}
+                                                </span>
+                                                {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {isExpanded && (
+                                        <div style={{ padding: '1.5rem', borderTop: '1px solid var(--border)', backgroundColor: 'rgba(0,0,0,0.01)' }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem' }}>
+                                                <div style={{ padding: '1.5rem', backgroundColor: 'white', borderRadius: '12px', border: '1px dashed var(--primary)', position: 'relative' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                                        <h4 style={{ fontSize: '0.9rem', color: 'var(--primary)', margin: 0 }}><Truck size={16} style={{ verticalAlign: 'middle', marginRight: '5px' }} /> DISPATCH SLIP</h4>
+                                                        {isPrintable && (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handlePrintSlips(order); }}
+                                                                className="btn-outline"
+                                                                style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                                            >
+                                                                <Printer size={14} /> Print Slip
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.9rem' }}>
+                                                        <div style={{ marginBottom: '10px' }}>
+                                                            <strong>{order.first_name} {order.last_name}</strong><br />
+                                                            {order.address}<br />
+                                                            {order.city} - {order.pincode}
+                                                        </div>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', paddingTop: '10px' }}>
+                                                            <span>Payment: <strong>{order.payment_method?.toUpperCase()}</strong></span>
+                                                            <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>₹{order.total}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>Manage Status</h4>
+                                                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                        <select
+                                                            value={pendingStatus[order.id] || order.status || 'Pending'}
+                                                            onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                                                            style={{ padding: '8px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.85rem' }}
+                                                        >
+                                                            {['Pending', 'Preparing', 'Shipped', 'Delivered', 'Cancelled'].map(opt => (
+                                                                <option key={opt} value={opt}>{opt}</option>
+                                                            ))}
+                                                        </select>
+                                                        {pendingStatus[order.id] && pendingStatus[order.id] !== order.status && (
+                                                            <button onClick={() => updateOrderStatus(order.id)} className="btn-primary" style={{ padding: '8px 15px', fontSize: '0.8rem' }}>Confirm</button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ marginTop: '1.5rem', backgroundColor: 'white', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                                                    <thead>
+                                                        <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                                                            <th style={{ textAlign: 'left', padding: '10px' }}>ITEM</th>
+                                                            <th style={{ textAlign: 'center' }}>SIZE</th>
+                                                            <th style={{ textAlign: 'center' }}>QTY</th>
+                                                            <th style={{ textAlign: 'right', padding: '10px' }}>PRICE</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {order.order_items?.map((item) => (
+                                                            <tr key={item.id} style={{ borderBottom: '1px solid #f9f9f9' }}>
+                                                                <td style={{ padding: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                    <img src={item.products?.image_url} alt="" style={{ width: '30px', height: '40px', borderRadius: '4px', objectFit: 'cover' }} onError={(e) => e.target.src = 'https://via.placeholder.com/50'} />
+                                                                    <span>{item.product_name || item.products?.name}</span>
+                                                                </td>
+                                                                <td style={{ textAlign: 'center' }}>{item.selected_size || '-'}</td>
+                                                                <td style={{ textAlign: 'center' }}>{item.quantity}</td>
+                                                                <td style={{ textAlign: 'right', padding: '10px', fontWeight: 'bold' }}>₹{item.price}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </React.Fragment>
                         );
                     })
                 ) : (
                     <div style={{ textAlign: 'center', padding: '5rem', color: 'var(--text-muted)' }}>
-                        <ShoppingBag size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
-                        <p>No orders found matching your filters.</p>
+                        <ShoppingBag size={48} style={{ opacity: 0.2 }} />
+                        <p>No orders found.</p>
                     </div>
                 )}
             </div>
+
+            <style>{`
+                @media print {
+                    .admin-orders-page > *:not(.dispatch-slip-printable) {
+                        display: none !important;
+                    }
+                    .dispatch-slip-printable {
+                        display: block !important;
+                        page-break-after: always;
+                    }
+                }
+            `}</style>
         </div>
     );
 };
